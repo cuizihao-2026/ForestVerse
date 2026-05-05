@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.CommentMapper">
+    <resultMap id="commentMap" type="com.example.backend.entity.Comment">
+        <id property="id" column="id"/>
+        <result property="articleId" column="article_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="content" column="content"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="replyToUserId" column="reply_to_user_id"/>
+        <result property="status" column="status"/>
+        <result property="rejectReason" column="reject_reason"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="userName" column="user_name"/>
+        <result property="userAvatar" column="user_avatar"/>
+        <result property="replyToUserName" column="reply_to_user_name"/>
+        <result property="articleTitle" column="article_title"/>
+        <result property="userNickname" column="user_nickname"/>
+        <result property="userUsername" column="user_username"/>
+    </resultMap>
+
+    <select id="findByArticleId" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               ru.nickname as reply_to_user_name
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        WHERE c.article_id = #{articleId}
+        ORDER BY c.created_at DESC
+    </select>
+
+    <select id="findByArticleIdAndStatus" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               ru.nickname as reply_to_user_name
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        WHERE c.article_id = #{articleId} AND c.status = #{status}
+        ORDER BY c.created_at DESC
+    </select>
+
+    <select id="findByArticleIdForUser" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               ru.nickname as reply_to_user_name
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        WHERE c.article_id = #{articleId} AND (c.status = 2 OR (c.user_id = #{userId} AND c.status = 1))
+        ORDER BY c.created_at DESC
+    </select>
+
+    <select id="findById" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               ru.nickname as reply_to_user_name
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        WHERE c.id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.backend.entity.Comment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO comment (article_id, user_id, content, parent_id, reply_to_user_id, status, created_at)
+        VALUES (#{articleId}, #{userId}, #{content}, #{parentId}, #{replyToUserId}, #{status}, NOW())
+    </insert>
+
+    <update id="update" parameterType="com.example.backend.entity.Comment">
+        UPDATE comment
+        <set>
+            <if test="content != null">content = #{content},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM comment WHERE id = #{id}
+    </delete>
+
+    <select id="countByArticleId" resultType="int">
+        SELECT COUNT(*) FROM comment WHERE article_id = #{articleId}
+    </select>
+
+    <select id="countByArticleIdAndStatus" resultType="int">
+        SELECT COUNT(*) FROM comment WHERE article_id = #{articleId} AND status = #{status}
+    </select>
+
+    <select id="findByStatus" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               ru.nickname as reply_to_user_name
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        WHERE c.status = #{status}
+        ORDER BY c.created_at DESC
+    </select>
+
+    <select id="findAll" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               u.nickname as user_nickname, u.username as user_username,
+               ru.nickname as reply_to_user_name,
+               a.title as article_title
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        LEFT JOIN article a ON c.article_id = a.id
+        ORDER BY c.created_at DESC
+    </select>
+    
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*) FROM comment WHERE status = #{status}
+    </select>
+
+    <select id="findAllPaginated" resultMap="commentMap">
+        SELECT c.*, 
+               u.nickname as user_name, u.avatar as user_avatar,
+               u.nickname as user_nickname, u.username as user_username,
+               ru.nickname as reply_to_user_name,
+               a.title as article_title
+        FROM comment c
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN user ru ON c.reply_to_user_id = ru.id
+        LEFT JOIN article a ON c.article_id = a.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (c.content LIKE CONCAT('%', #{keyword}, '%')
+                     OR a.title LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND c.status = #{status}
+            </if>
+        </where>
+        ORDER BY c.created_at DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM comment c
+        LEFT JOIN article a ON c.article_id = a.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (c.content LIKE CONCAT('%', #{keyword}, '%')
+                     OR a.title LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND c.status = #{status}
+            </if>
+        </where>
+    </select>
+</mapper>

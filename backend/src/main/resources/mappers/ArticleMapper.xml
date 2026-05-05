@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.ArticleMapper">
+    <resultMap id="articleMap" type="com.example.backend.entity.Article">
+        <id property="id" column="id" />
+        <result property="userId" column="user_id" />
+        <result property="title" column="title" />
+        <result property="cover" column="cover" />
+        <result property="status" column="status" />
+        <result property="rejectReason" column="reject_reason" />
+        <result property="category" column="category" />
+        <result property="tags" column="tags" />
+        <result property="views" column="views" />
+        <result property="likes" column="likes" />
+        <result property="comments" column="comments" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="publishedAt" column="published_at" />
+    </resultMap>
+
+    <resultMap id="articleWithAuthorMap" type="com.example.backend.entity.Article" extends="articleMap">
+        <result property="authorNickname" column="author_nickname" />
+        <result property="authorUsername" column="author_username" />
+    </resultMap>
+
+    <select id="findById" parameterType="Long" resultMap="articleMap">
+        SELECT * FROM article WHERE id = #{id}
+    </select>
+
+    <select id="findByUserId" parameterType="Long" resultMap="articleMap">
+        SELECT * FROM article WHERE user_id = #{userId} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByStatus" parameterType="Integer" resultMap="articleMap">
+        SELECT * FROM article WHERE status = #{status} ORDER BY created_at DESC
+    </select>
+
+    <select id="findPublished" resultMap="articleMap">
+      SELECT * FROM article WHERE status = 3 ORDER BY published_at DESC
+    </select>
+
+    <select id="findAll" resultMap="articleMap">
+        SELECT * FROM article ORDER BY created_at DESC
+    </select>
+
+    <select id="findAllWithAuthor" resultMap="articleWithAuthorMap">
+        SELECT a.*,
+               u.nickname as author_nickname,
+               u.username as author_username
+        FROM article a
+        LEFT JOIN user u ON a.user_id = u.id
+        ORDER BY a.created_at DESC
+    </select>
+
+    <select id="searchPublished" parameterType="String" resultMap="articleMap">
+        SELECT * FROM article 
+        WHERE status = 3 
+        AND (title LIKE CONCAT('%', #{keyword}, '%') 
+             OR category LIKE CONCAT('%', #{keyword}, '%') 
+             OR tags LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY published_at DESC
+    </select>
+
+    <insert id="insert" parameterType="com.example.backend.entity.Article" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article (user_id, title, cover, status, reject_reason, category, tags, views, likes, comments, created_at, updated_at, published_at)
+        VALUES (#{userId}, #{title}, #{cover}, #{status}, #{rejectReason}, #{category}, #{tags}, #{views}, #{likes}, #{comments}, NOW(), NOW(), #{publishedAt})
+    </insert>
+
+    <update id="update" parameterType="com.example.backend.entity.Article">
+        UPDATE article
+        SET title = #{title},
+            cover = #{cover},
+            status = #{status},
+            reject_reason = #{rejectReason},
+            category = #{category},
+            tags = #{tags},
+            updated_at = NOW(),
+            published_at = #{publishedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM article WHERE id = #{id}
+    </delete>
+
+    <update id="softDelete" parameterType="Long">
+        DELETE FROM article WHERE id = #{id}
+    </update>
+
+    <update id="incrementViews" parameterType="Long">
+        UPDATE article SET views = views + 1 WHERE id = #{id}
+    </update>
+
+    <update id="incrementLikes" parameterType="Long">
+        UPDATE article SET likes = likes + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementLikes" parameterType="Long">
+        UPDATE article SET likes = likes - 1 WHERE id = #{id}
+    </update>
+
+    <update id="incrementComments" parameterType="Long">
+        UPDATE article SET comments = comments + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementComments" parameterType="Long">
+        UPDATE article SET comments = comments - 1 WHERE id = #{id}
+    </update>
+    
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM article
+    </select>
+    
+    <select id="countByStatus" parameterType="Integer" resultType="int">
+        SELECT COUNT(*) FROM article WHERE status = #{status}
+    </select>
+
+    <select id="findAllWithAuthorPaginated" resultMap="articleWithAuthorMap">
+        SELECT a.*,
+               u.nickname as author_nickname,
+               u.username as author_username
+        FROM article a
+        LEFT JOIN user u ON a.user_id = u.id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (a.title LIKE CONCAT('%', #{keyword}, '%')
+                     OR a.category LIKE CONCAT('%', #{keyword}, '%')
+                     OR a.tags LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND a.status = #{status}
+            </if>
+        </where>
+        ORDER BY a.created_at DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countAllWithAuthor" resultType="long">
+        SELECT COUNT(*)
+        FROM article a
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (a.title LIKE CONCAT('%', #{keyword}, '%')
+                     OR a.category LIKE CONCAT('%', #{keyword}, '%')
+                     OR a.tags LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null">
+                AND a.status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="findPublishedPaginated" resultMap="articleMap">
+        SELECT * FROM article WHERE status = 3 ORDER BY published_at DESC LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countPublished" resultType="long">
+        SELECT COUNT(*) FROM article WHERE status = 3
+    </select>
+
+    <select id="searchPublishedPaginated" resultMap="articleMap">
+        SELECT * FROM article 
+        WHERE status = 3 
+        AND (title LIKE CONCAT('%', #{keyword}, '%') 
+             OR category LIKE CONCAT('%', #{keyword}, '%') 
+             OR tags LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY published_at DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countSearchPublished" resultType="long">
+        SELECT COUNT(*) FROM article 
+        WHERE status = 3 
+        AND (title LIKE CONCAT('%', #{keyword}, '%') 
+             OR category LIKE CONCAT('%', #{keyword}, '%') 
+             OR tags LIKE CONCAT('%', #{keyword}, '%'))
+    </select>
+</mapper>

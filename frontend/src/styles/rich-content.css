@@ -1,0 +1,139 @@
+.rich-content-wrapper {
+  background: transparent !important;
+  text-align: left;
+}
+
+.rich-content-wrapper :deep(h1),
+.rich-content-wrapper :deep(h2),
+.rich-content-wrapper :deep(h3),
+.rich-content-wrapper :deep(h4),
+.rich-content-wrapper :deep(h5),
+.rich-content-wrapper :deep(p),
+.rich-content-wrapper :deep(ul),
+.rich-content-wrapper :deep(ol),
+.rich-content-wrapper :deep(li) {
+  background: transparent !important;
+}
+
+.rich-content-wrapper :deep(h1) {
+  font-size: 36px !important;
+  font-weight: 700 !important;
+  margin: 2.5em 0 0.5em !important;
+  color: #111827 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(h2) {
+  font-size: 28px !important;
+  font-weight: 600 !important;
+  margin: 2em 0 0.5em !important;
+  color: #111827 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.01em !important;
+  padding-top: 0.25em !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(h3) {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  margin: 1.75em 0 0.5em !important;
+  color: #111827 !important;
+  line-height: 1.35 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(h4) {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin: 1.5em 0 0.5em !important;
+  color: #111827 !important;
+  line-height: 1.4 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(h5) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin: 1.25em 0 0.5em !important;
+  color: #374151 !important;
+  line-height: 1.45 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(p) {
+  margin: 1em 0 !important;
+  font-size: 18px !important;
+  line-height: 1.8 !important;
+  color: #374151 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(ul),
+.rich-content-wrapper :deep(ol) {
+  padding-left: 1.5em !important;
+  margin: 1em 0 !important;
+}
+
+.rich-content-wrapper :deep(li) {
+  margin: 0.5em 0 !important;
+  font-size: 18px !important;
+  line-height: 1.8 !important;
+  color: #374151 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.rich-content-wrapper :deep(strong),
+.rich-content-wrapper :deep(b) {
+  font-weight: 600 !important;
+  color: #111827 !important;
+}
+
+.rich-content-wrapper :deep(em),
+.rich-content-wrapper :deep(i) {
+  font-style: italic !important;
+  color: #374151 !important;
+}
+
+.rich-content-wrapper :deep(u) {
+  text-decoration: underline !important;
+  text-decoration-color: #2563eb !important;
+  text-underline-offset: 4px !important;
+  text-decoration-thickness: 2px !important;
+}
+
+.rich-content-wrapper :deep(blockquote) {
+  border-left: 4px solid #3b82f6 !important;
+  padding-left: 16px !important;
+  margin: 1.5em 0 !important;
+  color: #64748b !important;
+  font-style: italic !important;
+}
+
+.rich-content-wrapper :deep(pre) {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  padding: 16px 20px !important;
+  border-radius: 8px !important;
+  overflow-x: auto !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+  margin: 1.5em 0 !important;
+}
+
+.rich-content-wrapper :deep(code) {
+  background: #f1f5f9 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 0.9em !important;
+  color: #e11d48 !important;
+}
+
+.rich-content-wrapper :deep(pre code) {
+  background: transparent !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+}

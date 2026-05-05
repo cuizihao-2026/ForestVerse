@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.UserMapper">
+    <resultMap id="userMap" type="com.example.backend.entity.User">
+        <id property="id" column="id" />
+        <result property="username" column="username" />
+        <result property="nickname" column="nickname" />
+        <result property="password" column="password" />
+        <result property="email" column="email" />
+        <result property="avatar" column="avatar" />
+        <result property="bio" column="bio" />
+        <result property="role" column="role" />
+        <result property="status" column="status" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <resultMap id="userMapWithoutPassword" type="com.example.backend.entity.User">
+        <id property="id" column="id" />
+        <result property="username" column="username" />
+        <result property="nickname" column="nickname" />
+        <result property="email" column="email" />
+        <result property="avatar" column="avatar" />
+        <result property="bio" column="bio" />
+        <result property="role" column="role" />
+        <result property="status" column="status" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <select id="findByUsername" parameterType="String" resultMap="userMap">
+        SELECT * FROM user WHERE username = #{username}
+    </select>
+
+    <select id="findByEmail" parameterType="String" resultMap="userMap">
+        SELECT * FROM user WHERE email = #{email}
+    </select>
+
+    <insert id="insert" parameterType="com.example.backend.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user (username, nickname, password, email, avatar, bio, role, status, created_at, updated_at)
+        VALUES (#{username}, #{nickname}, #{password}, #{email}, #{avatar}, #{bio}, #{role}, #{status}, NOW(), NOW())
+    </insert>
+
+    <select id="findById" parameterType="Long" resultMap="userMap">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+
+    <update id="update" parameterType="com.example.backend.entity.User">
+        UPDATE user
+        SET username = #{username},
+            nickname = #{nickname},
+            password = #{password},
+            email = #{email},
+            avatar = #{avatar},
+            bio = #{bio},
+            role = #{role},
+            status = #{status},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="Long">
+        DELETE FROM user WHERE id = #{id}
+    </delete>
+
+    <update id="updatePassword" parameterType="map">
+        UPDATE user
+        SET password = #{password},
+            updated_at = NOW()
+        WHERE username = #{username} AND email = #{email}
+    </update>
+
+    <select id="findAll" resultMap="userMapWithoutPassword">
+        SELECT id, username, nickname, email, avatar, bio, role, status, created_at, updated_at
+        FROM user ORDER BY created_at DESC
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM user
+    </select>
+    
+    <select id="countActiveUsers" resultType="int">
+        SELECT COUNT(*) FROM user WHERE status = 'ACTIVE'
+    </select>
+    
+    <select id="searchUsers" resultMap="userMapWithoutPassword">
+        SELECT id, username, nickname, email, avatar, bio, role, status, created_at, updated_at
+        FROM user
+        WHERE status = 'ACTIVE'
+        AND id != #{excludeUserId}
+        AND (username LIKE CONCAT('%', #{keyword}, '%') OR nickname LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY
+            CASE
+                WHEN nickname = #{keyword} THEN 1
+                WHEN username = #{keyword} THEN 2
+                WHEN nickname LIKE CONCAT(#{keyword}, '%') THEN 3
+                WHEN username LIKE CONCAT(#{keyword}, '%') THEN 4
+                WHEN nickname LIKE CONCAT('%', #{keyword}, '%') THEN 5
+                ELSE 6
+            END,
+            created_at DESC
+        LIMIT 20
+    </select>
+</mapper>

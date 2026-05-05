@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.FriendRequestMapper">
+    <resultMap id="friendRequestMap" type="com.example.backend.entity.FriendRequest">
+        <id property="id" column="id" />
+        <result property="senderId" column="sender_id" />
+        <result property="receiverId" column="receiver_id" />
+        <result property="status" column="status" />
+        <result property="message" column="message" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <resultMap id="friendRequestWithSenderMap" type="com.example.backend.entity.FriendRequest" extends="friendRequestMap">
+        <association property="sender" javaType="com.example.backend.entity.User" resultMap="com.example.backend.mapper.UserMapper.userMap" columnPrefix="sender_"/>
+    </resultMap>
+
+    <resultMap id="friendRequestWithReceiverMap" type="com.example.backend.entity.FriendRequest" extends="friendRequestMap">
+        <association property="receiver" javaType="com.example.backend.entity.User" resultMap="com.example.backend.mapper.UserMapper.userMap" columnPrefix="receiver_"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.backend.entity.FriendRequest" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO friend_request (sender_id, receiver_id, status, message, created_at, updated_at)
+        VALUES (#{senderId}, #{receiverId}, #{status}, #{message}, NOW(), NOW())
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE friend_request
+        SET status = #{status},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="findById" parameterType="Long" resultMap="friendRequestMap">
+        SELECT * FROM friend_request WHERE id = #{id}
+    </select>
+
+    <select id="findByReceiverId" parameterType="Long" resultMap="friendRequestWithSenderMap">
+        SELECT fr.*,
+               u.id as sender_id,
+               u.username as sender_username,
+               u.nickname as sender_nickname,
+               u.avatar as sender_avatar,
+               u.bio as sender_bio,
+               u.role as sender_role,
+               u.status as sender_status,
+               u.created_at as sender_created_at,
+               u.updated_at as sender_updated_at
+        FROM friend_request fr
+        LEFT JOIN user u ON fr.sender_id = u.id
+        WHERE fr.receiver_id = #{receiverId}
+        ORDER BY fr.created_at DESC
+    </select>
+
+    <select id="findBySenderId" parameterType="Long" resultMap="friendRequestWithReceiverMap">
+        SELECT fr.*,
+               u.id as receiver_id,
+               u.username as receiver_username,
+               u.nickname as receiver_nickname,
+               u.avatar as receiver_avatar,
+               u.bio as receiver_bio,
+               u.role as receiver_role,
+               u.status as receiver_status,
+               u.created_at as receiver_created_at,
+               u.updated_at as receiver_updated_at
+        FROM friend_request fr
+        LEFT JOIN user u ON fr.receiver_id = u.id
+        WHERE fr.sender_id = #{senderId}
+        ORDER BY fr.created_at DESC
+    </select>
+
+    <select id="findBySenderAndReceiver" resultMap="friendRequestMap">
+        SELECT * FROM friend_request
+        WHERE sender_id = #{senderId} AND receiver_id = #{receiverId}
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+</mapper>

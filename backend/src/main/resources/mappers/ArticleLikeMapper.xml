@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.ArticleLikeMapper">
+    <resultMap id="articleLikeMap" type="com.example.backend.entity.ArticleLike">
+        <id property="id" column="id" />
+        <result property="articleId" column="article_id" />
+        <result property="userId" column="user_id" />
+        <result property="createdAt" column="created_at" />
+    </resultMap>
+
+    <resultMap id="articleMap" type="com.example.backend.entity.Article">
+        <id property="id" column="id" />
+        <result property="userId" column="user_id" />
+        <result property="title" column="title" />
+        <result property="cover" column="cover" />
+        <result property="status" column="status" />
+        <result property="category" column="category" />
+        <result property="tags" column="tags" />
+        <result property="views" column="views" />
+        <result property="likes" column="likes" />
+        <result property="comments" column="comments" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+        <result property="publishedAt" column="published_at" />
+    </resultMap>
+
+    <select id="findByArticleIdAndUserId" resultMap="articleLikeMap">
+        SELECT * FROM article_like WHERE article_id = #{articleId} AND user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="com.example.backend.entity.ArticleLike" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article_like (article_id, user_id, created_at)
+        VALUES (#{articleId}, #{userId}, NOW())
+    </insert>
+
+    <delete id="deleteByArticleIdAndUserId">
+        DELETE FROM article_like WHERE article_id = #{articleId} AND user_id = #{userId}
+    </delete>
+
+    <select id="countByArticleId" parameterType="Long" resultType="int">
+        SELECT COUNT(*) FROM article_like WHERE article_id = #{articleId}
+    </select>
+
+    <select id="findLikedArticlesByUserId" resultMap="articleMap">
+        SELECT a.* FROM article a
+        INNER JOIN article_like al ON a.id = al.article_id
+        WHERE al.user_id = #{userId}
+        ORDER BY al.created_at DESC
+    </select>
+
+    <select id="findLikedPublishedArticlesByUserId" resultMap="articleMap">
+        SELECT a.* FROM article a
+        INNER JOIN article_like al ON a.id = al.article_id
+        WHERE al.user_id = #{userId} AND a.status = 3
+        ORDER BY al.created_at DESC
+    </select>
+</mapper>

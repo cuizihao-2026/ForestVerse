@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.backend.mapper.ChatMessageMapper">
+
+    <resultMap id="chatMessageMap" type="com.example.backend.entity.ChatMessage">
+        <id property="id" column="id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="receiverId" column="receiver_id"/>
+        <result property="content" column="content"/>
+        <result property="isRead" column="is_read"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_message (sender_id, receiver_id, content, is_read, created_at)
+        VALUES (#{senderId}, #{receiverId}, #{content}, #{isRead}, #{createdAt})
+    </insert>
+
+    <select id="findByConversation" resultMap="chatMessageMap">
+        SELECT * FROM chat_message
+        WHERE (sender_id = #{userId1} AND receiver_id = #{userId2})
+           OR (sender_id = #{userId2} AND receiver_id = #{userId1})
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="findByConversationPaginated" resultMap="chatMessageMap">
+        SELECT * FROM (
+            SELECT * FROM chat_message
+            WHERE (sender_id = #{userId1} AND receiver_id = #{userId2})
+               OR (sender_id = #{userId2} AND receiver_id = #{userId1})
+            ORDER BY created_at DESC
+            LIMIT #{offset}, #{limit}
+        ) AS t
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="countConversation" resultType="int">
+        SELECT COUNT(*) FROM chat_message
+        WHERE (sender_id = #{userId1} AND receiver_id = #{userId2})
+           OR (sender_id = #{userId2} AND receiver_id = #{userId1})
+    </select>
+
+    <select id="findByUserId" resultMap="chatMessageMap">
+        SELECT * FROM chat_message
+        WHERE sender_id = #{userId} OR receiver_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+
+    <update id="markAsRead">
+        UPDATE chat_message
+        SET is_read = 1
+        WHERE sender_id = #{senderId} AND receiver_id = #{receiverId} AND is_read = 0
+    </update>
+
+    <select id="countUnread" resultType="int">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE sender_id = #{senderId} AND receiver_id = #{receiverId} AND is_read = 0
+    </select>
+
+    <select id="getLatestMessagesForFriends" resultType="java.util.HashMap">
+        SELECT 
+            friend_id,
+            content,
+            created_at
+        FROM (
+            SELECT 
+                CASE 
+                    WHEN sender_id = #{userId} THEN receiver_id
+                    ELSE sender_id
+                END AS friend_id,
+                content,
+                created_at,
+                ROW_NUMBER() OVER (
+                    PARTITION BY CASE 
+                        WHEN sender_id = #{userId} THEN receiver_id
+                        ELSE sender_id
+                    END
+                    ORDER BY created_at DESC
+                ) AS rn
+            FROM chat_message
+            WHERE 
+                (sender_id = #{userId} AND receiver_id IN
+                    <foreach collection="friendIds" item="id" open="(" separator="," close=")">
+                        #{id}
+                    </foreach>
+                )
+                OR
+                (receiver_id = #{userId} AND sender_id IN
+                    <foreach collection="friendIds" item="id" open="(" separator="," close=")">
+                        #{id}
+                    </foreach>
+                )
+        ) ranked
+        WHERE rn = 1
+    </select>
+
+    <select id="getUnreadCountsForFriends" resultType="java.util.HashMap">
+        SELECT 
+            sender_id AS friend_id,
+            COUNT(*) AS unread_count
+        FROM chat_message
+        WHERE 
+            receiver_id = #{userId}
+            AND sender_id IN
+            <foreach collection="friendIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+            AND is_read = 0
+        GROUP BY sender_id
+    </select>
+
+</mapper>
