@@ -1,44 +1,44 @@
 # ================================================
-# 森域社区 (ForestVerse) - Git 忽略文件
+
 # ================================================
 
-# 编译输出目录
-**/target/
-**/dist/
-**/dist-ssr/
-**/build/
-**/out/
 
-# 依赖目录
-**/node_modules/
 
-# 日志文件
-*.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
-# 环境变量文件
-*.env
-*.env.local
-*.env.*.local
 
-# 敏感配置文件
-**/config/website-settings.yaml
-**/src/main/resources/config/website-settings.yaml
-backend/config/website-settings.yaml
 
-# 备份目录
-**/backups/
 
-# 上传文件目录
-**/uploads/
 
-# IDE 和编辑器
-.idea/
-*.iws
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 *.iml
 *.ipr
 .vscode/
