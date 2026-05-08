@@ -56,19 +56,19 @@
 
               <div class="article-meta">
                 <div class="meta-left">
-                  <span class="meta-item">👁️ {{ article.views || 0 }}</span>
-                  <span class="meta-item">❤️ {{ article.likes || 0 }}</span>
-                  <span class="meta-item">💬 {{ article.comments || 0 }}</span>
+                  <span class="meta-item">阅读 {{ article.views || 0 }}</span>
+                  <span class="meta-item">点赞 {{ article.likes || 0 }}</span>
+                  <span class="meta-item">评论 {{ article.comments || 0 }}</span>
                 </div>
                 <span class="meta-time">{{ formatDate(article.createdAt) }}</span>
               </div>
             </div>
             <div class="article-actions">
               <button class="action-btn btn btn-sm btn-secondary" @click="viewArticle(article.id)" title="查看">
-                👁️ 查看
+                查看
               </button>
               <button class="action-btn btn btn-sm btn-secondary" @click="deleteArticle(article.id)" title="删除">
-                🗑️ 删除
+                删除
               </button>
             </div>
           </div>
@@ -270,8 +270,8 @@ interface Comment {
 }
 
 const tabs: Tab[] = [
-  { id: 'articles', label: '文章管理', icon: '📄' },
-  { id: 'comments', label: '评论管理', icon: '💬' }
+  { id: 'articles', label: '文章管理', icon: '' },
+  { id: 'comments', label: '评论管理', icon: '' }
 ];
 
 const router = useRouter();
@@ -1086,27 +1086,31 @@ watch(activeTab, (newTab) => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .content-management {
-    padding: 20px;
+    padding: 16px;
   }
   
   .search-filter {
     flex-direction: column;
-    flex-wrap: wrap;
+    gap: 12px;
   }
   
   .search-input {
-    min-width: auto;
+    width: 100%;
+  }
+  
+  .filter-select {
+    width: 100%;
+    flex: 0 0 auto;
   }
   
   .item-count {
     width: 100%;
     text-align: right;
-    margin-top: 8px;
   }
   
   .cards-grid {
     grid-template-columns: 1fr;
-    gap: var(--spacing);
+    gap: 16px;
   }
 
   .article-card {
@@ -1116,6 +1120,15 @@ watch(activeTab, (newTab) => {
   .article-cover {
     width: 100%;
     height: 200px;
+  }
+
+  .info-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
   }
 }
 

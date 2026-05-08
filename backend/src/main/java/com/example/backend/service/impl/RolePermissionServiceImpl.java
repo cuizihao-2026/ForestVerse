@@ -67,4 +67,10 @@ public class RolePermissionServiceImpl implements RolePermissionService {
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toSet());
     }
+
+    @Override
+    public boolean hasPermission(String roleName, String permission) {
+        Set<String> permissions = getPermissionsByRoleName(roleName);
+        return permissions.contains(permission);
+    }
 }

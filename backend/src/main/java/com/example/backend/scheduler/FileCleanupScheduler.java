@@ -1,7 +1,9 @@
 package com.example.backend.scheduler;
 
+import com.example.backend.mapper.ChatMessageMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -22,9 +24,13 @@ public class FileCleanupScheduler {
     private static final Logger logger = LoggerFactory.getLogger(FileCleanupScheduler.class);
 
     private static final String CHAT_IMAGES_DIR = "uploads/chat-images";
+    private static final String EXPIRED_IMAGE_URL = "/uploads/static/image_expired.jpg";
 
     // 保留天数：7天
     private static final long RETENTION_DAYS = 7;
+
+    @Autowired
+    private ChatMessageMapper chatMessageMapper;
 
     @Async("scheduledTaskExecutor")
     @Scheduled(cron = "0 0 2 * * ?") // 每天凌晨2点执行
@@ -33,6 +39,7 @@ public class FileCleanupScheduler {
         try {
             String projectRoot = System.getProperty("user.dir");
             Path chatImagesPath = Paths.get(projectRoot, CHAT_IMAGES_DIR);
+            Path baseUploadsPath = Paths.get(projectRoot, "uploads");
 
             if (!Files.exists(chatImagesPath)) {
                 logger.info("聊天图片目录不存在，跳过清理任务");
@@ -40,6 +47,7 @@ public class FileCleanupScheduler {
             }
 
             AtomicLong totalSize = new AtomicLong(0);
+            AtomicLong dbUpdateCount = new AtomicLong(0);
             Instant cutoffTime = Instant.now().minus(RETENTION_DAYS, ChronoUnit.DAYS);
 
             long deletedCount;
@@ -61,6 +69,18 @@ public class FileCleanupScheduler {
                             try {
                                 BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
                                 long size = attrs.size();
+                                
+                                // 构建原始URL
+                                Path relativePath = baseUploadsPath.relativize(path);
+                                String fileUrl = "/uploads/" + relativePath.toString().replace("\\", "/");
+                                
+                                // 更新数据库
+                                int updated = chatMessageMapper.updateContentByContent(fileUrl, EXPIRED_IMAGE_URL);
+                                if (updated > 0) {
+                                    logger.info("数据库已更新 {} 条记录，URL从 {} 更新为 {}", updated, fileUrl, EXPIRED_IMAGE_URL);
+                                    dbUpdateCount.addAndGet(updated);
+                                }
+                                
                                 Files.delete(path);
                                 logger.info("已删除聊天图片: " + path);
                                 totalSize.addAndGet(size);
@@ -73,8 +93,8 @@ public class FileCleanupScheduler {
                         .sum();
             }
 
-            logger.info("聊天图片清理任务完成！共删除 {} 个文件，释放空间: {:.2f} MB", 
-                    deletedCount, totalSize.get() / (1024.0 * 1024.0));
+            logger.info("聊天图片清理任务完成！共删除 {} 个文件，更新 {} 条数据库记录，释放空间: {:.2f} MB", 
+                    deletedCount, dbUpdateCount.get(), totalSize.get() / (1024.0 * 1024.0));
 
         } catch (Exception e) {
             logger.error("聊天图片清理任务执行失败", e);

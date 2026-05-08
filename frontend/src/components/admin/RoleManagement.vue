@@ -138,8 +138,8 @@ interface Permission {
 }
 
 const tabs: Tab[] = [
-  { id: 'roles', label: '角色权限', icon: '🔐' },
-  { id: 'permissions', label: '权限查询', icon: '📋' }
+  { id: 'roles', label: '角色权限', icon: '' },
+  { id: 'permissions', label: '权限查询', icon: '' }
 ];
 
 const activeTab = ref<string>('roles');
@@ -439,8 +439,48 @@ onMounted(() => {
     padding: 16px;
   }
 
+  .search-filter {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .item-count {
+    width: 100%;
+    text-align: right;
+  }
+
   .permission-cards {
     grid-template-columns: 1fr;
+  }
+
+  .role-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .permission-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .permission-check {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+  }
+
+  .edit-mode__header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .edit-mode__actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

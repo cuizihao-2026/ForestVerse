@@ -2,7 +2,9 @@
   <div class="resource-stats">
     <div class="resource-card">
       <div class="resource-item">
-        <div class="resource-icon">💻</div>
+        <div class="resource-icon">
+          <el-icon><Cpu /></el-icon>
+        </div>
         <div class="resource-info">
           <div class="resource-label">CPU 使用率</div>
           <div class="resource-sub">{{ (serverStats.availableProcessors || 4) }} 核心</div>
@@ -15,7 +17,9 @@
         </div>
       </div>
       <div class="resource-item">
-        <div class="resource-icon">🧠</div>
+        <div class="resource-icon">
+          <el-icon><Odometer /></el-icon>
+        </div>
         <div class="resource-info">
           <div class="resource-label">系统内存</div>
           <div class="resource-sub">{{ (serverStats.usedMemory || 0).toFixed(0) }} / {{ (serverStats.totalMemory || 0).toFixed(0) }} MB</div>
@@ -28,7 +32,9 @@
         </div>
       </div>
       <div class="resource-item">
-        <div class="resource-icon">☕</div>
+        <div class="resource-icon">
+          <el-icon><Box /></el-icon>
+        </div>
         <div class="resource-info">
           <div class="resource-label">Java Heap</div>
           <div class="resource-sub">{{ (serverStats.heapMemoryUsed || 0).toFixed(0) }} / {{ (serverStats.heapMemoryMax || 0).toFixed(0) }} MB</div>
@@ -41,7 +47,9 @@
         </div>
       </div>
       <div class="resource-item">
-        <div class="resource-icon">⚡</div>
+        <div class="resource-icon">
+          <el-icon><Lightning /></el-icon>
+        </div>
         <div class="resource-info">
           <div class="resource-label">系统负载</div>
           <div class="resource-sub">{{ serverStats.systemLoad > 0 ? serverStats.systemLoad.toFixed(2) : '-' }}</div>
@@ -58,6 +66,8 @@
 </template>
 
 <script setup lang="ts">
+import { Cpu, Odometer, Box, Lightning } from '@element-plus/icons-vue'
+
 const props = defineProps<{
   serverStats: {
     cpuPercent: number;
@@ -109,6 +119,15 @@ const props = defineProps<{
 .resource-icon {
   font-size: 24px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resource-icon .el-icon {
+  width: 28px;
+  height: 28px;
+  color: #64748b;
 }
 
 .resource-info {

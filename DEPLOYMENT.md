@@ -1,4 +1,4 @@
-# 森域社区 (ForestVerse) v1.1 - 源码部署教程
+# 森域社区 (ForestVerse) v1.3.0 - 源码部署教程
 
 本教程将指导您如何从源码部署森域社区。
 
@@ -175,10 +175,10 @@ git clone <repository-url>
 cd ForestVerse
 
 # 导入表结构
-mysql -u root -p forestverse < backend/src/main/resources/db/migration/backend.sql
+mysql -u root -p forestverse < backend/src/main/resources/db/migration/senyu.sql
 
 # 或者使用刚才创建的用户
-mysql -u forestverse_user -p forestverse < backend/src/main/resources/db/migration/backend.sql
+mysql -u forestverse_user -p forestverse < backend/src/main/resources/db/migration/senyu.sql
 ```
 
 ### 3. 初始化管理员账号
@@ -603,5 +603,5 @@ location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
 
 ---
 
-**文档版本**：v1.1  
-**最后更新**：2026-05-05
+**文档版本**：v1.3.0  
+**最后更新**：2026-05-09

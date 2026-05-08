@@ -19,9 +19,20 @@
       <div class="comment-list">
         <div v-for="comment in comments" :key="comment.id" class="comment-card card">
           <div class="comment-header">
-            <el-avatar :size="40" :src="comment.userAvatar || ''">
+            <img 
+              v-if="comment.userAvatar" 
+              :src="comment.userAvatar" 
+              :alt="comment.userName || '用户头像'" 
+              class="avatar"
+              style="width: 40px; height: 40px;"
+            />
+            <div 
+              v-else 
+              class="avatar fallback"
+              style="width: 40px; height: 40px; font-size: 16px;"
+            >
               {{ (comment.userName || '用')[0] }}
-            </el-avatar>
+            </div>
             <div class="user-info">
               <div class="user-name">{{ comment.userName || '匿名用户' }}</div>
               <div class="comment-time">{{ formatTime(comment.createdAt) }}</div>

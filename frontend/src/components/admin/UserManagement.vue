@@ -2,17 +2,36 @@
   <div class="user-management">
     <!-- 搜索和筛选 -->
     <div class="search-filter">
-      <input 
-        type="text" 
-        v-model="searchQuery" 
-        placeholder="搜索用户名或昵称" 
-        class="search-input form-input"
-      >
+      <div class="hero-search" :class="{ 'is-focused': isFocused }">
+        <div class="search-icon-wrap">
+          <el-icon class="search-icon"><Search /></el-icon>
+        </div>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="搜索用户名或昵称" 
+          class="search-input-field"
+          @focus="isFocused = true"
+          @blur="isFocused = false"
+        >
+        <button 
+          v-if="searchQuery" 
+          type="button" 
+          class="search-clear-btn"
+          @click="searchQuery = ''"
+        >
+          <el-icon><Close /></el-icon>
+        </button>
+      </div>
       <select v-model="roleFilter" class="filter-select form-input form-select">
         <option value="">所有角色</option>
-        <option value="ADMIN">管理员</option>
-        <option value="AUTHOR">作者</option>
-        <option value="USER">普通用户</option>
+        <option 
+          v-for="rp in rolePermissions" 
+          :key="rp.roleName" 
+          :value="rp.roleName"
+        >
+          {{ rp.description || rp.roleName }}
+        </option>
       </select>
       <select v-model="statusFilter" class="filter-select form-input form-select">
         <option value="">所有状态</option>
@@ -37,36 +56,33 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in paginatedUsers" :key="user.id">
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.nickname }}</td>
-            <td>{{ user.email }}</td>
+          <tr v-for="userData in paginatedUsers" :key="userData.user.id">
+            <td>{{ userData.user.id }}</td>
+            <td>{{ userData.user.username }}</td>
+            <td>{{ userData.user.nickname }}</td>
+            <td>{{ userData.user.email }}</td>
             <td>
-              <template v-if="user.role === 'SUPER_ADMIN'">
-                <span class="super-admin-badge">{{ getRoleText(user.role) }}</span>
-              </template>
-              <template v-else>
-                <select
-                  v-model="user.role"
-                  @change="updateUserRole(user.id, user.role)"
-                  class="role-select form-input form-select"
+              <select
+                v-model="userData.user.role"
+                @change="updateUserRole(userData.user.id, userData.user.role)"
+                class="role-select form-input form-select"
+                :disabled="!canManageUser(userData)"
+              >
+                <option 
+                  v-for="roleOption in getAvailableRoles()" 
+                  :key="roleOption.value" 
+                  :value="roleOption.value"
                 >
-                  <option 
-                    v-for="roleOption in getAvailableRoles()" 
-                    :key="roleOption.value" 
-                    :value="roleOption.value"
-                  >
-                    {{ roleOption.text }}
-                  </option>
-                </select>
-              </template>
+                  {{ roleOption.text }}
+                </option>
+              </select>
             </td>
             <td>
               <select
-                v-model="user.status"
-                @change="updateUserStatus(user.id, user.status)"
+                v-model="userData.user.status"
+                @change="updateUserStatus(userData.user.id, userData.user.status)"
                 class="status-select form-input form-select"
+                :disabled="!canManageUser(userData)"
               >
                 <option value="ACTIVE">活跃</option>
                 <option value="BANNED">禁用</option>
@@ -75,8 +91,8 @@
             <td>
               <button
                 class="btn btn-danger"
-                @click="deleteUser(user.id)"
-                :disabled="user.id === currentUserId || user.role === 'SUPER_ADMIN'"
+                @click="deleteUser(userData.user.id)"
+                :disabled="!canManageUser(userData)"
               >
                 删除
               </button>
@@ -140,10 +156,13 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { currentUser as currentUserStore } from '../../stores/auth';
 import { get, put, del } from '../../utils/api';
+import { hasPermission } from '../../stores/permission';
+import { Search, Close } from '@element-plus/icons-vue';
 
 const user = computed(() => currentUserStore.value);
 const currentUserId = computed(() => user.value?.id || 0);
-const users = ref<any[]>([]);
+const users = ref<any[]>([]); // 现在存储的是 { user, permissions } 对象
+const rolePermissions = ref<any[]>([]); // 存储所有角色权限配置
 const isLoading = ref(false);
 const showMessage = ref(false);
 const messageText = ref('');
@@ -151,6 +170,7 @@ const messageType = ref<'success' | 'error'>('success');
 const searchQuery = ref('');
 const roleFilter = ref('');
 const statusFilter = ref('');
+const isFocused = ref(false);
 const showDeleteDialog = ref(false);
 const deletingUserId = ref<number | null>(null);
 const deletingUserName = ref('');
@@ -176,50 +196,77 @@ const goToPage = (page: number) => {
   }
 };
 
-// 获取当前用户可用的角色选项
-const getAvailableRoles = () => {
-  if (user.value?.role === 'SUPER_ADMIN') {
-    return [
-      { value: 'USER', text: '普通用户' },
-      { value: 'AUTHOR', text: '作者' },
-      { value: 'ADMIN', text: '管理员' }
-    ];
-  }
-  // 管理员只能选择普通用户和作者
-  return [
-    { value: 'USER', text: '普通用户' },
-    { value: 'AUTHOR', text: '作者' }
-  ];
+// 获取某个角色的权限列表
+const getRolePermissions = (roleName: string): string[] => {
+  const rolePerm = rolePermissions.value.find(rp => rp.roleName === roleName);
+  if (!rolePerm || !rolePerm.permissionNames) return [];
+  return rolePerm.permissionNames.split(',').map((p: string) => p.trim()).filter((p: string) => p);
 };
 
-// 获取角色显示文本
-const getRoleText = (role?: string) => {
-  const roleMap: Record<string, string> = {
-    'SUPER_ADMIN': '超级管理员',
-    'ADMIN': '管理员',
-    'AUTHOR': '作者',
-    'USER': '普通用户'
-  };
-  return roleMap[role || 'USER'] || '普通用户';
+// 获取当前用户可用的角色选项
+const getAvailableRoles = () => {
+  const hasUserSuperManage = hasPermission('user.supermanage');
+  const hasUserManage = hasPermission('user:manage');
+
+  // 从角色权限配置中构建角色选项
+  const allRoles = rolePermissions.value
+    .filter(rp => rp.roleName !== 'SUPER_ADMIN') // 排除超级管理员
+    .map(rp => ({
+      value: rp.roleName,
+      text: rp.description || rp.roleName
+    }));
+
+  // 过滤可以选择的角色
+  return allRoles.filter(role => {
+    const targetPermissions = getRolePermissions(role.value);
+    
+    // 任何人都不能选择有 user.supermanage 的角色
+    if (targetPermissions.includes('user.supermanage')) {
+      return false;
+    }
+    
+    // 只有 user.supermanage 才能选择有 user:manage 的角色
+    if (targetPermissions.includes('user:manage')) {
+      return hasUserSuperManage;
+    }
+    
+    // 其他角色只要有 user:manage 就可以选择
+    return hasUserManage || hasUserSuperManage;
+  });
+};
+
+// 判断用户是否可以被当前用户管理
+const canManageUser = (targetUserData: any) => {
+  const targetUser = targetUserData.user;
+  const targetPermissions = new Set(targetUserData.permissions);
+  
+  // 用户不能管理自己
+  if (targetUser.id === currentUserId.value) return false;
+  
+  // 目标用户有 user.supermanage 权限，没人能管理/显示（包括其他 user.supermanage 用户）
+  if (targetPermissions.has('user.supermanage')) return false;
+  
+  // 有 user.supermanage 权限的用户可以管理其他人
+  if (hasPermission('user.supermanage')) return true;
+  
+  // 当前用户有 user:manage 权限，只能管理没有 user:manage 的用户
+  if (hasPermission('user:manage')) {
+    return !targetPermissions.has('user:manage');
+  }
+  
+  return false;
 };
 
 // 过滤用户列表
 const filteredUsers = computed(() => {
   let filtered = users.value;
   
-  // 排除自己
-  filtered = filtered.filter(u => u.id !== currentUserId.value);
-  
-  // 根据当前用户角色过滤
-  if (user.value?.role === 'ADMIN') {
-    // 管理员只能看到作者和普通用户
-    filtered = filtered.filter(u => u.role === 'AUTHOR' || u.role === 'USER');
-  } else if (user.value?.role === 'SUPER_ADMIN') {
-    // 超级管理员可以看到所有用户（除了自己）
-  }
+  // 排除自己和无法管理的用户
+  filtered = filtered.filter(u => canManageUser(u));
   
   // 搜索和筛选
-  return filtered.filter(user => {
+  return filtered.filter(userData => {
+    const user = userData.user;
     const matchesSearch = user.username.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                         user.nickname.toLowerCase().includes(searchQuery.value.toLowerCase());
     const matchesRole = !roleFilter.value || user.role === roleFilter.value;
@@ -227,6 +274,15 @@ const filteredUsers = computed(() => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 });
+
+// 获取角色权限配置
+const fetchRolePermissions = async () => {
+  try {
+    rolePermissions.value = await get('/api/user/role-permissions');
+  } catch (error: any) {
+    console.error('获取角色权限失败:', error);
+  }
+};
 
 // 获取用户列表
 const fetchUsers = async () => {
@@ -256,6 +312,8 @@ const updateUserRole = async (userId: number, role: string) => {
     setTimeout(() => {
       showMessage.value = false;
     }, 3000);
+    // 更新角色后重新获取用户列表，因为权限可能变化了
+    await fetchUsers();
   } catch (error: any) {
     console.error('更新角色失败:', error);
     showMessage.value = true;
@@ -264,11 +322,6 @@ const updateUserRole = async (userId: number, role: string) => {
     setTimeout(() => {
       showMessage.value = false;
     }, 3000);
-    // 恢复原来的角色
-    const user = users.value.find(u => u.id === userId);
-    if (user) {
-      // 这里可以从后端重新获取用户信息，或者保存原来的角色
-    }
   }
 };
 
@@ -290,19 +343,14 @@ const updateUserStatus = async (userId: number, status: string) => {
     setTimeout(() => {
       showMessage.value = false;
     }, 3000);
-    // 恢复原来的状态
-    const user = users.value.find(u => u.id === userId);
-    if (user) {
-      // 这里可以从后端重新获取用户信息，或者保存原来的状态
-    }
   }
 };
 
 // 删除用户 - 显示确认框
 const deleteUser = (userId: number) => {
-  const targetUser = users.value.find(u => u.id === userId);
+  const targetUserData = users.value.find(u => u.user.id === userId);
   deletingUserId.value = userId;
-  deletingUserName.value = targetUser?.nickname || targetUser?.username || '该用户';
+  deletingUserName.value = targetUserData?.user?.nickname || targetUserData?.user?.username || '该用户';
   showDeleteDialog.value = true;
 };
 
@@ -313,7 +361,7 @@ const confirmDelete = async () => {
   try {
     await del(`/api/user/${deletingUserId.value}`);
     // 从列表中移除删除的用户
-    users.value = users.value.filter(user => user.id !== deletingUserId.value);
+    users.value = users.value.filter(userData => userData.user.id !== deletingUserId.value);
     showMessage.value = true;
     messageText.value = '用户删除成功';
     messageType.value = 'success';
@@ -342,9 +390,10 @@ const cancelDelete = () => {
   deletingUserName.value = '';
 };
 
-// 组件挂载时获取用户列表
-onMounted(() => {
-  fetchUsers();
+// 组件挂载时获取用户列表和角色权限配置
+onMounted(async () => {
+  await fetchRolePermissions();
+  await fetchUsers();
 });
 </script>
 
@@ -365,11 +414,13 @@ onMounted(() => {
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-xl);
   align-items: center;
+  height: auto;
 }
 
-.search-input {
+.hero-search {
   flex: 1 1 200px;
   min-width: 0;
+  height: auto;
 }
 
 .filter-select {
@@ -414,16 +465,6 @@ onMounted(() => {
 .role-select,
 .status-select {
   min-width: 100px;
-}
-
-.super-admin-badge {
-  display: inline-block;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
-  color: #8B4513;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 /* 消息提示样式 */
@@ -575,7 +616,7 @@ onMounted(() => {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .user-management {
-    padding: 20px;
+    padding: 16px;
   }
   
   .user-management h2 {
@@ -585,23 +626,30 @@ onMounted(() => {
   
   .search-filter {
     flex-direction: column;
-    flex-wrap: wrap;
+    gap: 12px;
   }
   
-  .search-input {
-    min-width: auto;
+  .hero-search {
+    width: 100%;
+  }
+  
+  .filter-select {
+    width: 100%;
+    flex: 0 0 auto;
   }
   
   .user-table th,
   .user-table td {
-    padding: 12px;
-    font-size: 14px;
+    padding: 12px 8px;
+    font-size: 13px;
+    white-space: nowrap;
   }
   
   .role-select,
   .status-select {
     padding: 6px 10px;
     font-size: 13px;
+    width: 100%;
   }
   
   .btn {
@@ -612,7 +660,6 @@ onMounted(() => {
   .user-count {
     width: 100%;
     text-align: right;
-    margin-top: 8px;
   }
 }
 </style>

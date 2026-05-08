@@ -114,6 +114,7 @@ onMounted(() => {
               v-model="form.username" 
               placeholder="请输入用户名" 
               class="form-input"
+              autocomplete="username"
             />
           </div>
           
@@ -126,6 +127,7 @@ onMounted(() => {
                 v-model="form.password" 
                 placeholder="请输入密码" 
                 class="form-input password-input"
+                autocomplete="current-password"
               />
               <button 
                 type="button" 

@@ -86,7 +86,7 @@ const handleTabChange = (tab: string) => {
 
 .content {
   flex: 1;
-  padding: 40px;
+  padding: 12px;
   overflow-y: auto;
   scrollbar-width: none;
   background: white;
@@ -98,6 +98,9 @@ const handleTabChange = (tab: string) => {
 
 .content-section {
   animation: fadeInUp 0.6s ease-out;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes fadeIn {

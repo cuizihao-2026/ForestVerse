@@ -187,12 +187,11 @@ public class WebSocketSessionManager {
                         }
 
                         String username = user != null ? user.getUsername() : jwtUtils.getUsernameFromToken(currentToken);
-                        String role = user != null ? user.getRole() : jwtUtils.getRoleFromToken(currentToken);
                         if (username == null) {
                             continue;
                         }
 
-                        String newToken = jwtUtils.generateToken(userId, username, role);
+                        String newToken = jwtUtils.generateToken(userId, username);
                         long newExpiryTime = jwtUtils.getExpirationFromToken(newToken);
 
                         sendNewTokenToClient(userId, newToken);

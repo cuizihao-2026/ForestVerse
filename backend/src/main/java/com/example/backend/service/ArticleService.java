@@ -10,7 +10,7 @@ public interface ArticleService {
     
     ArticleDTO getArticleDetail(Long id);
     ArticleDTO getArticleDetail(Long id, Long currentUserId);
-    ArticleDTO getArticleDetail(Long id, Long currentUserId, Boolean isAdmin);
+    ArticleDTO getArticleDetail(Long id, Long currentUserId, Boolean hasManagePermission);
     
     Article getArticleById(Long id);
     

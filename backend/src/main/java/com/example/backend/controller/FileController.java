@@ -1,7 +1,12 @@
 package com.example.backend.controller;
 
+import com.example.backend.entity.User;
+import com.example.backend.service.RolePermissionService;
+import com.example.backend.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +28,12 @@ import java.util.stream.Stream;
 public class FileController {
 
     private static final Logger logger = LoggerFactory.getLogger(FileController.class);
+    
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     private static final String AVATAR_UPLOAD_DIR = "uploads/avatars";
     private static final String UPLOADS_DIR = "uploads";
@@ -119,7 +130,19 @@ public class FileController {
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "directory", required = false, defaultValue = "") String directory) {
+            @RequestParam(value = "directory", required = false, defaultValue = "") String directory,
+            HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "file:manage")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
+        } catch (Exception e) {
+            logger.error("权限校验失败: " + e.getMessage(), e);
+            return ResponseEntity.status(403).body("权限不足");
+        }
+        
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("文件不能为空");
         }
@@ -188,8 +211,15 @@ public class FileController {
     public ResponseEntity<?> listFiles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String directory) {
+            @RequestParam(required = false) String directory,
+            HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "file:manage")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
+            
             String projectRoot = System.getProperty("user.dir");
             Path uploadsPath = Paths.get(projectRoot, UPLOADS_DIR);
             
@@ -270,8 +300,14 @@ public class FileController {
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteFile(@RequestParam("path") String filePath) {
+    public ResponseEntity<?> deleteFile(@RequestParam("path") String filePath, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "file:manage")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
+            
             String projectRoot = System.getProperty("user.dir");
             Path baseUploadPath = Paths.get(projectRoot, UPLOADS_DIR);
             

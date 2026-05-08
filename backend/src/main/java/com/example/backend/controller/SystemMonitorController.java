@@ -3,13 +3,15 @@ package com.example.backend.controller;
 import com.example.backend.config.WebSocketHandler;
 import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.UserStats;
-import com.example.backend.entity.User;
 import com.example.backend.service.UserService;
+import com.example.backend.service.RolePermissionService;
+import com.example.backend.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
@@ -26,15 +28,27 @@ public class SystemMonitorController {
 
     private final UserService userService;
     private final WebSocketHandler webSocketHandler;
+    private final RolePermissionService rolePermissionService;
 
-    public SystemMonitorController(UserService userService, WebSocketHandler webSocketHandler) {
+    public SystemMonitorController(UserService userService, WebSocketHandler webSocketHandler, RolePermissionService rolePermissionService) {
         this.userService = userService;
         this.webSocketHandler = webSocketHandler;
+        this.rolePermissionService = rolePermissionService;
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserStats() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserStats(HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("用户不存在"));
+            }
+            
+            if (!rolePermissionService.hasPermission(user.getRole(), "console.use")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("您没有权限访问此接口"));
+            }
+            
             UserStats stats = userService.getUserStats();
             Map<String, Object> result = new HashMap<>();
             result.put("totalUsers", stats.getTotalUsers());
@@ -48,20 +62,21 @@ public class SystemMonitorController {
         }
     }
 
-    @GetMapping("/online")
-    public ResponseEntity<ApiResponse<List<User>>> getOnlineUsers() {
-        try {
-            List<User> onlineUsers = webSocketHandler.getOnlineUsers();
-            return ResponseEntity.ok(ApiResponse.success(onlineUsers));
-        } catch (Exception e) {
-            logger.error("操作失败: " + e.getMessage(), e);
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
+
 
     @GetMapping("/server")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getServerStats() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getServerStats(HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("用户不存在"));
+            }
+            
+            if (!rolePermissionService.hasPermission(user.getRole(), "console.use")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("您没有权限访问此接口"));
+            }
+            
             Map<String, Object> stats = new HashMap<>();
 
             MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
@@ -165,9 +180,40 @@ public class SystemMonitorController {
         return Math.round(bytes / (1024.0 * 1024.0) * 100.0) / 100.0;
     }
 
-    @PostMapping("/force-refresh")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> forceRefresh() {
+    @GetMapping("/online")
+    public ResponseEntity<ApiResponse<List<User>>> getOnlineUsers(HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("用户不存在"));
+            }
+            
+            if (!rolePermissionService.hasPermission(user.getRole(), "console.use")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("您没有权限访问此接口"));
+            }
+            
+            List<User> onlineUsers = webSocketHandler.getOnlineUsers();
+            return ResponseEntity.ok(ApiResponse.success(onlineUsers));
+        } catch (Exception e) {
+            logger.error("操作失败: " + e.getMessage(), e);
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/force-refresh")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> forceRefresh(HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("用户不存在"));
+            }
+            
+            if (!rolePermissionService.hasPermission(user.getRole(), "console.use")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("您没有权限访问此接口"));
+            }
+            
             webSocketHandler.broadcastForcedRefresh();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);

@@ -7,15 +7,27 @@
 
     <div v-else>
       <div v-if="articles.length === 0" class="empty-state">
-        <div class="empty-icon">❤️</div>
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+        </div>
         <h3>暂无喜欢的文章</h3>
         <p>去探索一下吧！</p>
       </div>
 
       <div v-else class="articles-grid">
         <div v-for="article in articles" :key="article.id" class="article-card card card-hover">
-          <div class="article-cover" v-if="article.cover">
-            <img :src="API_BASE_URL + article.cover" :alt="article.title" class="cover-image">
+          <div class="article-cover">
+            <img v-if="article.cover" :src="API_BASE_URL + article.cover" :alt="article.title" class="cover-image">
+            <div v-else class="cover-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>无封面</span>
+            </div>
           </div>
           <div class="article-content">
             <div class="article-body">
@@ -34,16 +46,36 @@
 
               <div class="article-meta">
                 <div class="meta-left">
-                  <span class="meta-item">👁️ {{ article.views || 0 }}</span>
-                  <span class="meta-item">❤️ {{ article.likes || 0 }}</span>
-                  <span class="meta-item">💬 {{ article.comments || 0 }}</span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    {{ article.views || 0 }}
+                  </span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    {{ article.likes || 0 }}
+                  </span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                    {{ article.comments || 0 }}
+                  </span>
                 </div>
-                <span class="meta-time">{{ formatDate(article.createdAt) }}</span>
+                <span class="meta-time">{{ formatRelativeTime(article.createdAt) }}</span>
               </div>
             </div>
             <div class="article-actions">
-              <button class="action-btn btn btn-primary" @click="viewArticle(article)" title="查看">
-                👁️ 查看文章
+              <button class="action-btn btn btn-sm btn-secondary" @click="viewArticle(article)" title="查看">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                查看文章
               </button>
             </div>
           </div>
@@ -80,7 +112,7 @@ interface Article {
 const articles = ref<Article[]>([]);
 const loading = ref(false);
 
-const formatDate = (dateStr: any): string => {
+const formatRelativeTime = (dateStr: any): string => {
   if (!dateStr) return '';
   try {
     let date: Date;
@@ -96,11 +128,21 @@ const formatDate = (dateStr: any): string => {
 
     if (isNaN(date.getTime())) return '';
 
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const months = Math.floor(days / 30);
+    const years = Math.floor(days / 365);
+
+    if (seconds < 60) return '刚刚';
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 30) return `${days}天前`;
+    if (months < 12) return `${months}个月前`;
+    return `${years}年前`;
   } catch (e) {
     return '';
   }
@@ -166,9 +208,10 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: var(--spacing-md);
-  opacity: 0.5;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--spacing-md);
+  color: #d1d5db;
 }
 
 .empty-state h3 {
@@ -207,6 +250,27 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  color: #d1d5db;
+  gap: 8px;
+}
+
+.cover-placeholder svg {
+  width: 48px;
+  height: 48px;
+}
+
+.cover-placeholder span {
+  font-size: 12px;
 }
 
 .article-content {
@@ -282,7 +346,13 @@ onMounted(() => {
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+}
+
+.meta-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
 }
 
 .meta-time {
@@ -316,6 +386,15 @@ onMounted(() => {
   flex: 1;
   font-size: 13px;
   padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-icon {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 768px) {

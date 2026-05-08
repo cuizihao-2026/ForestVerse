@@ -4,7 +4,9 @@
     <div class="resource-section">
       <div class="resource-card">
         <div class="resource-item">
-          <div class="resource-icon">💻</div>
+          <div class="resource-icon">
+            <el-icon><Cpu /></el-icon>
+          </div>
           <div class="resource-info">
             <div class="resource-label">CPU 使用率</div>
             <div class="resource-sub">{{ safeServerStats.availableProcessors }} 核心</div>
@@ -17,7 +19,9 @@
           </div>
         </div>
         <div class="resource-item">
-          <div class="resource-icon">🧠</div>
+          <div class="resource-icon">
+            <el-icon><Odometer /></el-icon>
+          </div>
           <div class="resource-info">
             <div class="resource-label">系统内存</div>
             <div class="resource-sub">{{ safeServerStats.usedMemory.toFixed(0) }} / {{ safeServerStats.totalMemory.toFixed(0) }} MB</div>
@@ -30,7 +34,9 @@
           </div>
         </div>
         <div class="resource-item">
-          <div class="resource-icon">☕</div>
+          <div class="resource-icon">
+            <el-icon><Box /></el-icon>
+          </div>
           <div class="resource-info">
             <div class="resource-label">Java Heap</div>
             <div class="resource-sub">{{ safeServerStats.heapMemoryUsed.toFixed(0) }} / {{ safeServerStats.heapMemoryMax.toFixed(0) }} MB</div>
@@ -43,7 +49,9 @@
           </div>
         </div>
         <div class="resource-item">
-          <div class="resource-icon">⚡</div>
+          <div class="resource-icon">
+            <el-icon><Lightning /></el-icon>
+          </div>
           <div class="resource-info">
             <div class="resource-label">系统负载</div>
             <div class="resource-sub">{{ safeServerStats.systemLoadText }}</div>
@@ -61,39 +69,46 @@
     <!-- 统计信息在下 -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">📝</div>
+        <div class="stat-icon">
+          <el-icon><Document /></el-icon>
+        </div>
         <div class="stat-info">
           <div class="stat-value">{{ safeStats.publishedArticles }}</div>
           <div class="stat-label">已发布文章</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">⏳</div>
+        <div class="stat-icon">
+          <el-icon><Clock /></el-icon>
+        </div>
         <div class="stat-info">
           <div class="stat-value">{{ safeStats.pendingCount }}</div>
           <div class="stat-label">待审核</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">👥</div>
+        <div class="stat-icon">
+          <el-icon><UserFilled /></el-icon>
+        </div>
         <div class="stat-info">
           <div class="stat-value">{{ safeStats.totalUsers }}</div>
           <div class="stat-label">用户总数</div>
         </div>
       </div>
-      <div class="stat-card clickable" @click="handleViewOnline">
-        <div class="stat-icon">👤</div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <el-icon><Avatar /></el-icon>
+        </div>
         <div class="stat-info">
           <div class="stat-value">{{ safeStats.onlineUsers }}</div>
           <div class="stat-label">在线用户</div>
         </div>
-        <span class="view-hint">查看 →</span>
       </div>
     </div>
 
     <!-- 强制刷新按钮 -->
     <div class="action-row">
-      <button class="btn-force-refresh" @click="handleForceRefresh" :disabled="isRefreshing">
+      <button class="btn btn-primary" @click="handleForceRefresh" :disabled="isRefreshing">
         <span v-if="isRefreshing" class="loading-spinner"></span>
         {{ isRefreshing ? '刷新中...' : '强制刷新' }}
       </button>
@@ -105,6 +120,7 @@
 import { ref, computed } from 'vue';
 import { post } from '../../utils/api';
 import { showModal } from '../../stores/modal';
+import { Cpu, Odometer, Box, Lightning, Document, Clock, UserFilled, Avatar } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   stats: {
@@ -126,9 +142,7 @@ const props = defineProps<{
   };
 }>();
 
-const emit = defineEmits<{
-  (e: 'viewOnline'): void;
-}>();
+
 
 const isRefreshing = ref(false);
 
@@ -159,9 +173,7 @@ const safeServerStats = computed(() => {
   };
 });
 
-const handleViewOnline = () => {
-  emit('viewOnline');
-};
+
 
 const handleForceRefresh = async () => {
   try {
@@ -216,11 +228,6 @@ const handleForceRefresh = async () => {
 .stat-card.clickable:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
-}
-
-.stat-icon {
-  font-size: 32px;
-  flex-shrink: 0;
 }
 
 .stat-info {
@@ -293,6 +300,29 @@ const handleForceRefresh = async () => {
 .resource-icon {
   font-size: 24px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resource-icon .el-icon {
+  width: 28px;
+  height: 28px;
+  color: #64748b;
+}
+
+.stat-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon .el-icon {
+  width: 36px;
+  height: 36px;
+  color: #64748b;
 }
 
 .resource-info {
@@ -362,32 +392,6 @@ const handleForceRefresh = async () => {
 .action-row {
   display: flex;
   justify-content: flex-start;
-}
-
-.btn-force-refresh {
-  padding: 12px 32px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.btn-force-refresh:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-  background: #2563eb;
-}
-
-.btn-force-refresh:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }
 
 .loading-spinner {

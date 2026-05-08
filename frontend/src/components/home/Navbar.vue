@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { isLoggedIn as isLoggedInStore, currentUser as currentUserStore, logout, checkLoginStatus } from '../../stores/auth'
 import { hasPermission } from '../../stores/permission'
@@ -9,7 +9,6 @@ const router = useRouter()
 const route = useRoute()
 const isMenuOpen = ref(false)
 const isDropdownOpen = ref(false)
-let dropdownTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
   // 组件挂载时再次检查登录状态，确保最新
@@ -18,6 +17,11 @@ onMounted(() => {
   if (!isConfigLoaded.value) {
     loadSiteConfigFromStore()
   }
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const isLoggedIn = computed(() => isLoggedInStore.value)
@@ -61,21 +65,20 @@ const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value
 }
 
-const openDropdown = () => {
-  if (dropdownTimer) {
-    clearTimeout(dropdownTimer)
-    dropdownTimer = null
-  }
-  isDropdownOpen.value = true
+const toggleDropdown = (e: Event) => {
+  e.stopPropagation()
+  isDropdownOpen.value = !isDropdownOpen.value
 }
 
 const closeDropdown = () => {
-  if (dropdownTimer) {
-    clearTimeout(dropdownTimer)
+  isDropdownOpen.value = false
+}
+
+const handleClickOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (!target.closest('.user-menu')) {
+    closeDropdown()
   }
-  dropdownTimer = setTimeout(() => {
-    isDropdownOpen.value = false
-  }, 300) // 300毫秒延迟
 }
 </script>
 
@@ -83,10 +86,10 @@ const closeDropdown = () => {
   <nav class="navbar">
     <div class="navbar-container">
       <div class="navbar-left">
-        <div class="navbar-brand" @click="goToHome">
-          <div class="brand-icon-wrapper" :class="{ 'loaded': isConfigLoaded }">
-            <img v-if="fullSiteIconUrl" :src="fullSiteIconUrl" :alt="siteTitle" class="brand-icon-image" />
-          </div>
+        <div class="navbar-brand" role="button" tabindex="0" @click="goToHome" @keydown.enter="goToHome" aria-label="返回首页">
+        <div class="brand-icon-wrapper" :class="{ 'loaded': isConfigLoaded }">
+          <img v-if="fullSiteIconUrl" :src="fullSiteIconUrl" :alt="siteTitle" class="brand-icon-image" width="40" height="40" />
+        </div>
           <span v-if="siteTitle" class="brand-text">{{ siteTitle }}</span>
         </div>
         <ul class="nav-list">
@@ -106,31 +109,41 @@ const closeDropdown = () => {
       <div class="navbar-menu" :class="{ 'is-open': isMenuOpen }">
         <div class="navbar-auth">
           <template v-if="isLoggedIn">
-            <div 
-              class="user-menu"
-              @mouseenter="openDropdown"
-              @mouseleave="closeDropdown"
-            >
-              <div class="user-avatar-wrapper">
-                <img 
-                  v-if="currentUser?.avatar" 
-                  :src="currentUser.avatar" 
-                  :alt="currentUser?.nickname || '用户'"
-                  class="user-avatar"
-                />
-                <div v-else class="user-avatar fallback">
-                  {{ avatarInitial }}
+            <div class="user-menu">
+              <button 
+                class="user-button"
+                @click="toggleDropdown"
+                aria-label="用户菜单"
+              >
+                <div class="user-avatar-wrapper">
+                  <img 
+                    v-if="currentUser?.avatar" 
+                    :src="currentUser.avatar" 
+                    :alt="currentUser?.nickname || '用户'"
+                    class="avatar large border"
+                  />
+                  <div v-else class="avatar large border fallback">
+                    {{ avatarInitial }}
+                  </div>
                 </div>
-                <div 
-                  class="user-dropdown"
-                  :class="{ 'is-open': isDropdownOpen }"
-                >
-                  <button class="dropdown-item" @click="goToProfile">个人中心</button>
-                  <template v-if="hasPermission('admin.use')">
-                    <button class="dropdown-item admin-btn" @click="goToAdmin">管理面板</button>
-                  </template>
-                  <button class="dropdown-item logout-btn" @click="logout">退出登录</button>
-                </div>
+                <span class="dropdown-arrow" :class="{ 'is-open': isDropdownOpen }"></span>
+              </button>
+              <div 
+                class="user-dropdown"
+                :class="{ 'is-open': isDropdownOpen }"
+              >
+                <button class="dropdown-item" @click="goToProfile">
+                  <span class="item-text">个人中心</span>
+                </button>
+                <template v-if="hasPermission('admin.use')">
+                  <button class="dropdown-item admin-btn" @click="goToAdmin">
+                    <span class="item-text">管理面板</span>
+                  </button>
+                </template>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item logout-btn" @click="logout">
+                  <span class="item-text">退出登录</span>
+                </button>
               </div>
             </div>
           </template>
@@ -326,6 +339,15 @@ const closeDropdown = () => {
     display: block;
   }
 
+  .navbar-brand {
+    white-space: nowrap;
+    padding: 8px 8px;
+  }
+
+  .brand-text {
+    font-size: 18px;
+  }
+
   .navbar-menu {
     position: fixed;
     top: 68px;
@@ -350,16 +372,13 @@ const closeDropdown = () => {
   }
 
   .nav-list {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
 
   .nav-link {
-    width: 100%;
-    text-align: center;
-    justify-content: center;
+    padding: 9px 16px;
   }
 
   .navbar-auth {
@@ -375,30 +394,42 @@ const closeDropdown = () => {
   .user-menu {
     position: relative;
     width: 100%;
-    display: flex;
-    justify-content: center;
   }
 
-  .user-avatar-wrapper {
-    margin: 8px 0;
+  .user-button {
+    justify-content: center;
+    padding: 8px 12px;
   }
 
   .user-avatar {
-    width: 52px;
-    height: 52px;
-    font-size: 22px;
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
   }
 
   .user-dropdown {
     position: static;
     background: #f8fafc;
-    border-radius: 10px;
+    border-radius: 12px;
     margin-top: 12px;
     box-shadow: none;
-    opacity: 1;
+    opacity: 0;
+    max-height: 0;
     transform: none;
-    pointer-events: auto;
+    pointer-events: none;
     border: 1px solid #f1f5f9;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .user-dropdown.is-open {
+    opacity: 1;
+    max-height: 300px;
+    pointer-events: auto;
+  }
+
+  .dropdown-item {
+    justify-content: center;
   }
 
   .dropdown-item {
@@ -415,71 +446,79 @@ const closeDropdown = () => {
 /* 用户菜单样式 */
 .user-menu {
   position: relative;
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 10px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.user-button:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.user-button:active {
+  transform: scale(0.98);
 }
 
 .user-avatar-wrapper {
-  position: relative;
-  padding: 4px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.user-avatar-wrapper:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e2e8f0;
-  transition: all 0.2s ease;
-}
-
-.user-avatar.fallback {
-  background: linear-gradient(135deg, #12b7f5 0%, #108ee9 100%);
-  color: #fff;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 600;
 }
 
-.user-avatar:hover {
-  border-color: #cbd5e1;
+.dropdown-arrow {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #64748b;
+  transition: all 0.2s ease;
+  margin-left: 4px;
+}
+
+.dropdown-arrow.is-open {
+  transform: rotate(180deg);
 }
 
 .user-dropdown {
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-8px);
+  right: 0;
+  transform: translateY(-8px);
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-  min-width: 170px;
-  margin-top: 8px;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+  min-width: 200px;
+  margin-top: 10px;
   z-index: 1001;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  border: 1px solid #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 6px;
 }
 
 .user-dropdown.is-open {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
   pointer-events: auto;
 }
 
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 11px 18px;
+  padding: 10px 16px;
   text-align: left;
   border: none;
   background: none;
@@ -488,25 +527,22 @@ const closeDropdown = () => {
   color: #475569;
   transition: all 0.15s ease;
   font-weight: 500;
+  border-radius: 8px;
 }
 
 .dropdown-item:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
 }
 
 .dropdown-item.logout-btn {
   color: #ef4444;
-  border-top: 1px solid #f1f5f9;
-}
-
-.dropdown-item.admin-btn {
-  color: #667eea;
-}
-
-.dropdown-item.admin-btn:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
 }
 
 .dropdown-item.logout-btn:hover {

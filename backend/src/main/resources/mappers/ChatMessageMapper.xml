@@ -111,4 +111,15 @@
         GROUP BY sender_id
     </select>
 
+    <update id="updateContentByContent">
+        UPDATE chat_message
+        SET content = #{newContent}
+        WHERE content = #{oldContent}
+    </update>
+
+    <select id="findByContent" resultMap="chatMessageMap">
+        SELECT * FROM chat_message
+        WHERE content = #{content}
+    </select>
+
 </mapper>

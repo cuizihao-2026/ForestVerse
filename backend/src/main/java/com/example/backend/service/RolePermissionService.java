@@ -13,4 +13,5 @@ public interface RolePermissionService {
     RolePermission update(Long id, RolePermission rolePermission);
     void delete(Long id);
     Set<String> getPermissionsByRoleName(String roleName);
+    boolean hasPermission(String roleName, String permission);
 }

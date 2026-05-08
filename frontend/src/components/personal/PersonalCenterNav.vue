@@ -1,14 +1,14 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-user-profile">
-      <div class="sidebar-avatar">
-        <img v-if="user?.avatar" :src="user.avatar" alt="用户头像">
-        <div v-else class="sidebar-avatar-fallback">
-          {{ avatarInitial }}
-        </div>
+      <img v-if="user?.avatar" :src="user.avatar" alt="用户头像" class="avatar huge border">
+      <div v-else class="avatar huge border fallback">
+        {{ avatarInitial }}
       </div>
-      <h3 class="sidebar-user-name">{{ user?.nickname || user?.username }}</h3>
-      <p class="sidebar-user-role">{{ currentRoleDescription }}</p>
+      <div class="sidebar-user-info">
+        <h3 class="sidebar-user-name">{{ user?.nickname || user?.username }}</h3>
+        <p class="sidebar-user-role">{{ currentRoleDescription }}</p>
+      </div>
     </div>
 
     <nav class="sidebar-nav-menu">
@@ -19,17 +19,13 @@
         :class="{ active: activeTab === item.id }"
         @click="$emit('change-tab', item.id)"
       >
-        <span class="sidebar-nav-icon">{{ item.icon }}</span>
         <span class="nav-text">{{ item.label }}</span>
         <span v-if="item.hasUnread" class="unread-dot"></span>
       </div>
     </nav>
 
-    <div class="sidebar-nav-footer">
-      <div class="sidebar-nav-item sidebar-nav-footer-item" @click="handleGoBack">
-        <span class="sidebar-nav-icon">←</span>
-        <span class="nav-text">返回上页</span>
-      </div>
+    <div class="sidebar-nav-item sidebar-nav-footer-item" @click="handleGoBack">
+      <span class="nav-text">返回上页</span>
     </div>
   </div>
 </template>
@@ -75,18 +71,18 @@ const handleGoBack = () => {
 
 const navItems = computed<NavItem[]>(() => {
   const items: NavItem[] = [
-    { id: 'profile', label: '个人资料', icon: '👤' }
+    { id: 'profile', label: '个人资料', icon: '' }
   ]
   
   // 只有有 article:create 权限的用户才显示我的文章
   if (hasPermission('article:create')) {
-    items.push({ id: 'articles', label: '我的文章', icon: '📝' })
+    items.push({ id: 'articles', label: '我的文章', icon: '' })
   }
   
   items.push(
-    { id: 'likes', label: '我的喜欢', icon: '❤️' },
-    { id: 'notifications', label: '信息通知', icon: '🔔', hasUnread: unreadCount.value > 0 },
-    { id: 'settings', label: '账户设置', icon: '🔒' }
+    { id: 'likes', label: '我的喜欢', icon: '' },
+    { id: 'notifications', label: '信息通知', icon: '', hasUnread: unreadCount.value > 0 },
+    { id: 'settings', label: '账户设置', icon: '' }
   )
   
   return items

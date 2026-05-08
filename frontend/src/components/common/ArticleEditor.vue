@@ -2,78 +2,80 @@
   <div class="editor-container">
     <div class="editor-card card">
       <div class="editor-body">
-        <div class="editor-main">
-          <!-- 文章标题 -->
+        <main class="editor-main">
           <div class="form-group">
-            <div class="section-title">
+            <label class="section-title">
               文章标题
               <span class="char-count" :class="{ 'char-count-warning': formData.title.length > 90 }">{{ formData.title.length }}/100</span>
-            </div>
-            <input type="text" v-model="formData.title" class="form-input" placeholder="请输入文章标题..." maxlength="100">
+            </label>
+            <input type="text" v-model="formData.title" class="form-input" placeholder="请输入文章标题..." maxlength="100" autocomplete="off" />
           </div>
           
-          <!-- 文章内容 -->
           <div class="form-group content-group">
             <RichTextEditor 
               v-model="formData.content" 
               placeholder="请输入文章内容..."
             />
           </div>
-        </div>
-        <div class="editor-sidebar">
-          <div class="sidebar-section">
-            <div class="section-title">封面图片</div>
+        </main>
+        
+        <aside class="editor-sidebar">
+          <section class="sidebar-section">
+            <h3 class="section-title">封面图片</h3>
             <div class="cover-upload-area" v-if="formData.cover">
               <img :src="API_BASE_URL + formData.cover" class="cover-preview" alt="封面预览">
               <button class="btn btn-sm btn-secondary" @click="formData.cover = ''">更换封面</button>
             </div>
             <div v-else class="cover-upload-placeholder">
-              <input type="file" ref="coverFileInput" accept="image/*" @change="handleCoverUpload" style="display: none;">
+              <input type="file" ref="coverFileInput" accept="image/*" @change="handleCoverUpload" hidden>
               <button class="btn btn-secondary" @click="coverFileInput?.click()" :disabled="uploadingCover">
                 {{ uploadingCover ? '上传中...' : '上传封面' }}
               </button>
             </div>
-          </div>
-          <div class="sidebar-section">
-            <div class="section-title">分类</div>
+          </section>
+          
+          <section class="sidebar-section">
+            <h3 class="section-title">分类</h3>
             <input type="text" v-model="formData.category" class="form-input sidebar-input" placeholder="添加分类" disabled>
-          </div>
-          <div class="sidebar-section">
-            <div class="section-title">标签</div>
+          </section>
+          
+          <section class="sidebar-section">
+            <h3 class="section-title">标签</h3>
             <input type="text" v-model="formData.tags" class="form-input sidebar-input" placeholder="多个标签用逗号分隔" disabled>
-          </div>
-          <div class="sidebar-section">
-            <div class="section-title">发布状态</div>
-            <div class="status-toggle-group">
+          </section>
+          
+          <section class="sidebar-section">
+            <h3 class="section-title">发布状态</h3>
+            <div class="tab-toggle-wrapper">
+              <div class="tab-toggle-track">
+                <div class="tab-toggle-thumb" :class="{ 'is-right': (articleAuditEnabled ? formData.status === 1 : formData.status === 3) }"></div>
+              </div>
               <button 
-                :class="['status-toggle-btn', { active: formData.status === 0 }]"
+                type="button"
+                class="tab-toggle-label"
+                :class="{ active: formData.status === 0 }"
                 @click="formData.status = 0"
               >
-                📝 保存草稿
+                保存草稿
               </button>
               <button 
-                v-if="articleAuditEnabled"
-                :class="['status-toggle-btn', { active: formData.status === 1 }]"
-                @click="formData.status = 1"
+                type="button"
+                class="tab-toggle-label"
+                :class="{ active: articleAuditEnabled ? formData.status === 1 : formData.status === 3 }"
+                @click="formData.status = articleAuditEnabled ? 1 : 3"
               >
-                👀 提交审核
-              </button>
-              <button 
-                v-else
-                :class="['status-toggle-btn', { active: formData.status === 3 }]"
-                @click="formData.status = 3"
-              >
-                🚀 直接发布
+                {{ articleAuditEnabled ? '提交审核' : '直接发布' }}
               </button>
             </div>
-          </div>
+          </section>
+          
           <div class="sidebar-actions">
             <button class="btn btn-secondary btn-full" @click="handleCancel">返回</button>
             <button class="btn btn-primary btn-full" @click="handleSave" :disabled="saving">
               {{ saving ? '保存中...' : '保存' }}
             </button>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   </div>
@@ -280,6 +282,9 @@ const handleSave = async () => {
 <style scoped>
 .editor-container {
   animation: fadeIn 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes fadeIn {
@@ -296,6 +301,9 @@ const handleSave = async () => {
 .editor-card {
   overflow: hidden;
   padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-body {
@@ -303,16 +311,24 @@ const handleSave = async () => {
   gap: 0;
   padding: 0;
   overflow: hidden;
-  max-height: calc(100vh - 160px);
+  flex: 1;
+  min-height: 0;
 }
 
 .editor-main {
   flex: 1;
-  padding: 32px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
   text-align: left;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.editor-main::-webkit-scrollbar {
+  width: 0;
 }
 
 .editor-sidebar {
@@ -322,6 +338,7 @@ const handleSave = async () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -334,6 +351,7 @@ const handleSave = async () => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .sidebar-section {
@@ -400,6 +418,12 @@ const handleSave = async () => {
   background: #eff6ff;
   color: #1e40af;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .cover-upload-area {
@@ -470,7 +494,7 @@ const handleSave = async () => {
   .editor-main {
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 24px;
+    padding: 16px;
   }
 
   .editor-sidebar {

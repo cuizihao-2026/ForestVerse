@@ -46,7 +46,7 @@ public class AuthController {
         try {
             User user = userService.login(request.getUsername(), request.getPassword());
 
-            String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
+            String token = jwtUtils.generateToken(user.getId(), user.getUsername());
             
             // 获取token过期时间
             long expiryTime = jwtUtils.getExpirationFromToken(token);

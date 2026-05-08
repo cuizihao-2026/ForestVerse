@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { currentUser } from '../../stores/auth'
 import { onlineUserIds } from '../../stores/websocket'
 import { searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, getReceivedRequests, getSentRequests, getFriendsWithChatInfo } from '../../utils/friends'
 import type { User, FriendRequest, ChatMessage, FriendWithChatInfo } from '../../utils/friends'
 import { ElMessage } from 'element-plus'
+import { Search, Close, Plus } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -15,14 +16,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
+  (e: 'close-sidebar'): void
 }>()
 
 const searchQuery = ref('')
+const searchFriendQuery = ref('')
+const isSearchFocused = ref(false)
 const activeTab = ref('chats')
 const expandedGroups = ref<string[]>(['myFriends'])
 const searching = ref(false)
 const searchResults = ref<User[]>([])
-const searchFriendQuery = ref('')
 const searchFriendResults = ref<User[]>([])
 const friendRequests = ref<FriendRequest[]>([])
 const sentRequests = ref<FriendRequest[]>([])
@@ -290,6 +293,9 @@ const startChat = async (item: any) => {
   
   // 更新选中的聊天，让 ChatWindow 组件负责加载消息
   emit('update:modelValue', chat)
+  
+  // 关闭侧边栏
+  emit('close-sidebar')
 }
 
 // 格式化时间
@@ -372,6 +378,14 @@ const handleSearchFriend = async () => {
       searching.value = false
     }
   }, 300)
+}
+
+const clearSearchFriend = () => {
+  searchFriendQuery.value = ''
+  searchFriendResults.value = []
+  nextTick(() => {
+    // 如果需要的话可以在这里添加聚焦逻辑
+  })
 }
 
 // 添加好友弹窗搜索：搜索所有用户
@@ -496,19 +510,31 @@ onUnmounted(() => {
         </div>
       </div>
       <button class="btn-add-icon" @click="openSearchUserModal" title="添加好友">
-        ➕
+        <el-icon><Plus /></el-icon>
       </button>
     </div>
 
-    <div class="search-box">
-      <input 
-        type="text" 
+    <div class="hero-search" :class="{ 'is-focused': isSearchFocused }">
+      <div class="search-icon-wrap">
+        <el-icon class="search-icon"><Search /></el-icon>
+      </div>
+      <input
+        type="text"
         v-model="searchFriendQuery"
-        placeholder="搜索好友..." 
-        class="search-input"
+        placeholder="搜索好友..."
+        class="search-input-field"
+        @focus="isSearchFocused = true"
+        @blur="isSearchFocused = false"
         @input="handleSearchFriend"
       />
-      <span class="search-icon">🔍</span>
+      <button
+        v-if="searchFriendQuery"
+        type="button"
+        class="search-clear-btn"
+        @click="clearSearchFriend"
+      >
+        <el-icon><Close /></el-icon>
+      </button>
     </div>
 
     <!-- 搜索结果 -->
@@ -516,7 +542,7 @@ onUnmounted(() => {
       <div v-if="searching" class="search-loading">
         <p>搜索中...</p>
       </div>
-      <div v-else-if="searchFriendResults.length > 0">
+      <template v-else-if="searchFriendResults.length > 0">
         <div 
           class="search-result-item" 
           v-for="user in searchFriendResults" 
@@ -532,75 +558,72 @@ onUnmounted(() => {
             <p>{{ user.bio || '' }}</p>
           </div>
         </div>
-      </div>
+      </template>
       <div v-else class="search-empty">
         <p>未找到相关好友</p>
       </div>
     </div>
 
-    <div class="nav-tabs">
+    <div class="tabs-nav">
       <button 
-        class="nav-tab" 
+        class="tab-btn" 
         :class="{ active: activeTab === 'chats' }"
         @click="activeTab = 'chats'"
       >
-        💬 消息
+        消息
         <span v-if="chatsData.reduce((sum, c) => sum + c.unread, 0) > 0" class="tab-badge">
           {{ chatsData.reduce((sum, c) => sum + c.unread, 0) }}
         </span>
       </button>
       <button 
-        class="nav-tab" 
+        class="tab-btn" 
         :class="{ active: activeTab === 'friends' }"
         @click="activeTab = 'friends'"
       >
-        👥 好友
+        好友
       </button>
       <button 
-        class="nav-tab" 
+        class="tab-btn" 
         :class="{ active: activeTab === 'requests' }"
         @click="activeTab = 'requests'"
       >
         <span class="requests-badge" v-if="friendRequests.filter(r => r.status === 'PENDING').length > 0">{{ friendRequests.filter(r => r.status === 'PENDING').length }}</span>
-        📩 验证消息
+        验证消息
       </button>
     </div>
 
     <!-- 聊天记录列表 -->
     <div class="chat-list" v-if="activeTab === 'chats'">
       <div v-if="filteredChats.length === 0" class="empty-state">
-        <div class="empty-icon">💬</div>
         <p>暂无聊天记录</p>
       </div>
-      <div v-else>
-        <div 
-          v-for="chat in filteredChats" 
-          :key="chat.id"
-          class="chat-item"
-          :class="{ active: modelValue?.id === chat.id }"
-          @click="startChat(chat)"
-        >
-          <div class="chat-avatar-wrapper">
-            <img 
-              v-if="chat.avatar" 
-              :src="chat.avatar" 
-              :alt="chat.nickname"
-              class="chat-avatar"
-            />
-            <div v-else class="chat-avatar fallback">
-              {{ avatarInitial(chat.nickname) }}
-            </div>
-            <span v-if="chat.status === 'online'" class="status-dot small"></span>
+      <div 
+        v-for="chat in filteredChats" 
+        :key="chat.id"
+        class="chat-item"
+        :class="{ active: modelValue?.id === chat.id }"
+        @click="startChat(chat)"
+      >
+        <div class="chat-avatar-wrapper">
+          <img 
+            v-if="chat.avatar" 
+            :src="chat.avatar" 
+            :alt="chat.nickname"
+            class="chat-avatar"
+          />
+          <div v-else class="chat-avatar fallback">
+            {{ avatarInitial(chat.nickname) }}
           </div>
-          <div class="chat-detail">
-            <div class="chat-top">
-              <h4>{{ chat.nickname }}</h4>
-              <span class="chat-time">{{ chat.lastTime }}</span>
-            </div>
-            <div class="chat-bottom">
-              <p>{{ chat.lastMessage }}</p>
-              <span v-if="chat.unread > 0" class="unread-badge">{{ chat.unread }}</span>
-            </div>
+          <span v-if="chat.status === 'online'" class="status-dot small"></span>
+        </div>
+        <div class="chat-detail">
+          <div class="chat-top">
+            <h4>{{ chat.nickname }}</h4>
+            <span class="chat-time">{{ chat.lastTime }}</span>
+          </div>
+          <div class="chat-bottom">
+            <p>{{ chat.lastMessage }}</p>
+            <span v-if="chat.unread > 0" class="unread-badge">{{ chat.unread }}</span>
           </div>
         </div>
       </div>
@@ -613,8 +636,8 @@ onUnmounted(() => {
         :key="group.id"
         class="group-item"
       >
-        <div class="group-header" @click="toggleGroup(group.id)">
-          <span class="group-arrow" :class="{ expanded: expandedGroups.includes(group.id) }">▶</span>
+        <div class="group-header" @click="toggleGroup(group.id)" role="button" tabindex="0" @keydown.enter="toggleGroup(group.id)">
+          <span class="group-arrow" :class="{ expanded: expandedGroups.includes(group.id) }" aria-hidden="true">▶</span>
           <span class="group-name">{{ group.name }}</span>
           <span class="group-count">{{ getFriendsByGroup(group.id).filter(f => f.status === 'online').length }}/{{ getFriendsByGroup(group.id).length }}</span>
         </div>
@@ -652,22 +675,29 @@ onUnmounted(() => {
     <div class="requests-list" v-if="activeTab === 'requests'">
       <!-- 请求标签页 -->
       <div class="request-tabs">
-        <div 
-          class="request-tab" 
-          :class="{ active: requestTab === 'received' }"
-          @click="requestTab = 'received'"
-        >
-          收到的请求
-          <span v-if="friendRequests.filter(r => r.status === 'PENDING').length > 0" class="request-badge">
-            {{ friendRequests.filter(r => r.status === 'PENDING').length }}
-          </span>
-        </div>
-        <div 
-          class="request-tab" 
-          :class="{ active: requestTab === 'sent' }"
-          @click="requestTab = 'sent'"
-        >
-          发送的请求
+        <div class="tab-toggle-wrapper">
+          <div class="tab-toggle-track">
+            <div class="tab-toggle-thumb" :class="{ 'is-right': requestTab === 'sent' }"></div>
+          </div>
+          <button 
+            type="button"
+            class="tab-toggle-label" 
+            :class="{ active: requestTab === 'received' }"
+            @click="requestTab = 'received'"
+          >
+            收到
+            <span v-if="friendRequests.filter(r => r.status === 'PENDING').length > 0" class="request-badge">
+              {{ friendRequests.filter(r => r.status === 'PENDING').length }}
+            </span>
+          </button>
+          <button 
+            type="button"
+            class="tab-toggle-label" 
+            :class="{ active: requestTab === 'sent' }"
+            @click="requestTab = 'sent'"
+          >
+            发送
+          </button>
         </div>
       </div>
 
@@ -675,40 +705,37 @@ onUnmounted(() => {
         <!-- 收到的请求 -->
         <div v-if="requestTab === 'received'">
           <div v-if="friendRequests.length === 0" class="empty-requests">
-            <div class="empty-icon">✨</div>
             <p>暂无验证消息</p>
           </div>
-          <div v-else>
-            <div v-for="request in friendRequests" :key="request.id" class="request-item">
-              <div class="request-avatar-wrapper">
-                <img 
-                  v-if="request.sender?.avatar" 
-                  :src="request.sender.avatar" 
-                  :alt="request.sender?.nickname"
-                  class="request-avatar"
-                />
-                <div v-else class="request-avatar fallback">
-                  {{ avatarInitial(request.sender?.nickname || '用户') }}
-                </div>
+          <div v-for="request in friendRequests" :key="request.id" class="request-item">
+            <div class="request-avatar-wrapper">
+              <img 
+                v-if="request.sender?.avatar" 
+                :src="request.sender.avatar" 
+                :alt="request.sender?.nickname"
+                class="request-avatar"
+              />
+              <div v-else class="request-avatar fallback">
+                {{ avatarInitial(request.sender?.nickname || '用户') }}
               </div>
-              <div class="request-detail">
-                <div class="request-header">
-                  <h4>{{ request.sender?.nickname || '用户' }}</h4>
-                  <span class="request-status" :style="{ color: getStatusColor(request.status) }">
-                    {{ getStatusText(request.status) }}
-                  </span>
-                </div>
-                <p 
-                  class="request-message" 
-                  @click="openFullMessage(request.message || '想添加你为好友')"
-                >
-                  {{ request.message || '想添加你为好友' }}
-                </p>
+            </div>
+            <div class="request-detail">
+              <div class="request-header">
+                <h4>{{ request.sender?.nickname || '用户' }}</h4>
+                <span class="request-status" :style="{ color: getStatusColor(request.status) }">
+                  {{ getStatusText(request.status) }}
+                </span>
               </div>
-              <div class="request-actions" v-if="request.status === 'PENDING'">
-                <button class="btn-accept" @click="acceptRequest(request.id)">同意</button>
-                <button class="btn-reject" @click="rejectRequest(request.id)">拒绝</button>
-              </div>
+              <p 
+                class="request-message" 
+                @click="openFullMessage(request.message || '想添加你为好友')"
+              >
+                {{ request.message || '想添加你为好友' }}
+              </p>
+            </div>
+            <div class="request-actions" v-if="request.status === 'PENDING'">
+              <button class="btn-accept" @click="acceptRequest(request.id)">同意</button>
+              <button class="btn-reject" @click="rejectRequest(request.id)">拒绝</button>
             </div>
           </div>
         </div>
@@ -716,36 +743,33 @@ onUnmounted(() => {
         <!-- 发送的请求 -->
         <div v-if="requestTab === 'sent'">
           <div v-if="sentRequests.length === 0" class="empty-requests">
-            <div class="empty-icon">📤</div>
             <p>暂无发送的请求</p>
           </div>
-          <div v-else>
-            <div v-for="request in sentRequests" :key="request.id" class="request-item">
-              <div class="request-avatar-wrapper">
-                <img 
-                  v-if="request.receiver?.avatar" 
-                  :src="request.receiver.avatar" 
-                  :alt="request.receiver?.nickname"
-                  class="request-avatar"
-                />
-                <div v-else class="request-avatar fallback">
-                  {{ avatarInitial(request.receiver?.nickname || '用户') }}
-                </div>
+          <div v-for="request in sentRequests" :key="request.id" class="request-item">
+            <div class="request-avatar-wrapper">
+              <img 
+                v-if="request.receiver?.avatar" 
+                :src="request.receiver.avatar" 
+                :alt="request.receiver?.nickname"
+                class="request-avatar"
+              />
+              <div v-else class="request-avatar fallback">
+                {{ avatarInitial(request.receiver?.nickname || '用户') }}
               </div>
-              <div class="request-detail">
-                <div class="request-header">
-                  <h4>{{ request.receiver?.nickname || '用户' }}</h4>
-                  <span class="request-status" :style="{ color: getStatusColor(request.status) }">
-                    {{ getStatusText(request.status) }}
-                  </span>
-                </div>
-                <p 
-                  class="request-message" 
-                  @click="openFullMessage(request.message || '想添加你为好友')"
-                >
-                  {{ request.message || '想添加你为好友' }}
-                </p>
+            </div>
+            <div class="request-detail">
+              <div class="request-header">
+                <h4>{{ request.receiver?.nickname || '用户' }}</h4>
+                <span class="request-status" :style="{ color: getStatusColor(request.status) }">
+                  {{ getStatusText(request.status) }}
+                </span>
               </div>
+              <p 
+                class="request-message" 
+                @click="openFullMessage(request.message || '想添加你为好友')"
+              >
+                {{ request.message || '想添加你为好友' }}
+              </p>
             </div>
           </div>
         </div>
@@ -791,21 +815,23 @@ onUnmounted(() => {
         <button class="btn-close" @click="showSearchUserModal = false">✕</button>
       </div>
       <div class="modal-body">
-        <div class="search-box-modal">
+        <div class="hero-search">
+          <div class="search-icon-wrap">
+            <el-icon class="search-icon"><Search /></el-icon>
+          </div>
           <input 
             type="text" 
             v-model="searchUserQuery"
             placeholder="搜索用户名或昵称..." 
-            class="search-input-modal"
+            class="search-input-field"
             @input="handleSearchAllUsers"
           />
-          <span class="search-icon-modal">🔍</span>
         </div>
         <div class="search-results-modal">
           <div v-if="searching" class="search-loading-modal">
             <p>搜索中...</p>
           </div>
-          <div v-else-if="searchResults.length > 0">
+          <template v-else-if="searchResults.length > 0">
             <div v-for="user in searchResults" :key="user.id" class="search-result-modal">
               <div class="search-avatar-wrapper-modal">
                 <img v-if="user.avatar" :src="user.avatar" :alt="user.nickname" class="search-avatar-modal" />
@@ -817,7 +843,7 @@ onUnmounted(() => {
               </div>
               <button class="btn-add-modal" @click="openRequestModal(user); showSearchUserModal = false">添加</button>
             </div>
-          </div>
+          </template>
           <div v-else-if="searchUserQuery">
             <div class="search-empty-modal">
               <p>未找到匹配的用户</p>
@@ -849,6 +875,7 @@ onUnmounted(() => {
 .sidebar {
   width: 320px;
   background: #fafafa;
+  padding: 0;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e5e5e5;
@@ -857,7 +884,7 @@ onUnmounted(() => {
 
 .sidebar-header {
   padding: 16px;
-  background: #fff;
+  background: transparent;
   border-bottom: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
@@ -866,18 +893,23 @@ onUnmounted(() => {
 }
 
 .btn-add-icon {
-  padding: 8px 12px;
-  background: #f0f0f0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
+  border-radius: 50%;
+  font-size: 18px;
   cursor: pointer;
   transition: all 0.2s;
+  color: #666;
 }
 
 .btn-add-icon:hover {
-  background: #12b7f5;
-  transform: scale(1.05);
+  background: rgba(18, 183, 245, 0.1);
+  color: #12b7f5;
 }
 
 .user-info {
@@ -906,6 +938,8 @@ onUnmounted(() => {
 }
 
 .user-avatar.fallback {
+  width: 44px;
+  height: 44px;
   background: linear-gradient(135deg, #12b7f5 0%, #108ee9 100%);
   color: #fff;
   display: flex;
@@ -913,6 +947,7 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 16px;
   font-weight: 600;
+  border-radius: 4px;
 }
 
 .user-detail h3 {
@@ -928,37 +963,8 @@ onUnmounted(() => {
   color: #868686;
 }
 
-.search-box {
-  padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e5e5e5;
-  position: relative;
-}
-
-.search-input {
-  width: 100%;
-  padding: 8px 32px 8px 12px;
-  border: 1px solid #e5e5e5;
-  border-radius: 4px;
-  font-size: 13px;
-  outline: none;
-  background: #f4f4f4;
-  transition: all 0.2s;
-}
-
-.search-input:focus {
-  background: #fff;
-  border-color: #12b7f5;
-}
-
-.search-icon {
-  position: absolute;
-  right: 28px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  opacity: 0.5;
-  cursor: pointer;
+.hero-search {
+  margin: 12px 16px;
 }
 
 /* 搜索结果 */
@@ -1047,35 +1053,17 @@ onUnmounted(() => {
   background: #108ee9;
 }
 
-.nav-tabs {
-  display: flex;
-  background: #fff;
-  border-bottom: 1px solid #e5e5e5;
+.tabs-nav {
+  margin: 0 16px 16px 16px;
 }
 
-.nav-tab {
+.tabs-nav .tab-btn {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex: 1;
-  padding: 12px 8px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: #333;
-  cursor: pointer;
-  transition: background 0.2s;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.nav-tab:hover {
-  background: #f0f0f0;
-}
-
-.nav-tab.active {
-  background: #e5e5e5;
-  font-weight: 500;
+  padding: 10px 12px;
+  font-size: 14px;
 }
 
 .tab-badge {
@@ -1374,36 +1362,10 @@ onUnmounted(() => {
 }
 
 .request-tabs {
-  display: flex;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid #e5e5e5;
-  background: #fff;
-  gap: 8px;
+  background: transparent;
   flex-shrink: 0;
-}
-
-.request-tab {
-  flex: 1;
-  text-align: center;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #6b7280;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.request-tab:hover {
-  background: #f5f5f5;
-}
-
-.request-tab.active {
-  background: #12b7f5;
-  color: #fff;
 }
 
 .request-badge {

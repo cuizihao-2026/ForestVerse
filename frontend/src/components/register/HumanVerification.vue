@@ -5,16 +5,17 @@
       <div class="modal-content">
         <p>请完成以下验证，以确认您不是机器人</p>
         <div class="captcha-container">
-          <div class="captcha-image" @click="refreshCaptcha">
-            <img v-if="captchaImage" :src="captchaImage" alt="验证码" />
+          <button type="button" class="captcha-image" @click="refreshCaptcha" aria-label="点击刷新验证码">
+            <img v-if="captchaImage" :src="captchaImage" alt="验证码图片" />
             <span v-else>加载中...</span>
-          </div>
+          </button>
           <input
             type="text"
             v-model="userInput"
             placeholder="请输入图形验证码"
             class="captcha-input"
             @keyup.enter="verify"
+            autocomplete="off"
           />
         </div>
         <div v-if="errorMessage" class="error-text">{{ errorMessage }}</div>

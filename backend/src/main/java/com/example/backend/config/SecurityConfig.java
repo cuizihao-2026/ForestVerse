@@ -41,6 +41,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin("http://localhost:8020");
         configuration.addAllowedOrigin("http://127.0.0.1:8020");
+        configuration.addAllowedOrigin("https://senyu.toptop.me");
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);

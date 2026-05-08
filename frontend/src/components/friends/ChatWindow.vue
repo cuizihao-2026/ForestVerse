@@ -3,6 +3,7 @@ import { ref, watch, nextTick, toRefs, onMounted, onUnmounted, computed } from '
 import { sendChatMessage, markAsRead, type ChatMessage, updateFriendGroup, updateFriendRemark, deleteFriend, getFriends, getConversation, uploadChatImage } from '../../utils/friends'
 import { currentUser } from '../../stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Loading, User } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   chat?: any
@@ -516,7 +517,6 @@ watch(() => chat.value?.id, async (newId) => {
 <template>
   <div class="content-area">
     <div v-if="!chat" class="empty-content">
-      <div class="empty-content-icon">💬</div>
       <p>选择一个聊天开始对话</p>
     </div>
     <div v-else class="chat-window">
@@ -538,7 +538,9 @@ watch(() => chat.value?.id, async (newId) => {
           </div>
         </div>
         <div class="chat-window-actions">
-          <button class="action-btn" @click="openFriendInfo">👤</button>
+          <button class="action-btn" @click="openFriendInfo" aria-label="查看好友信息">
+            <el-icon><User /></el-icon>
+          </button>
         </div>
       </div>
 
@@ -615,16 +617,14 @@ watch(() => chat.value?.id, async (newId) => {
         <div class="chat-input-wrapper">
           <div class="input-row">
             <div class="menu-wrapper">
-              <button class="image-btn" @click="toggleMenu" :disabled="isUploading">
-                <span v-if="isUploading">⏳</span>
-                <span v-else>➕</span>
+              <button class="image-btn" @click="toggleMenu" :disabled="isUploading" aria-label="上传图片">
+                <el-icon v-if="!isUploading"><Plus /></el-icon>
+                <el-icon v-else class="is-loading"><Loading /></el-icon>
               </button>
-              <!-- 弹出菜单 -->
-              <div v-if="showMenu" class="menu-container">
-                <div class="menu-item" @click="selectImage">
-                  <span class="menu-icon">📷</span>
+              <div v-if="showMenu" class="menu-container" role="menu">
+                <button class="menu-item" @click="selectImage" role="menuitem" aria-label="发送图片">
                   <span class="menu-text">图片</span>
-                </div>
+                </button>
               </div>
             </div>
             <input 
@@ -648,7 +648,7 @@ watch(() => chat.value?.id, async (newId) => {
                 {{ newMessage.length }}/1000
               </span>
             </div>
-            <button class="send-btn" @click="sendMessage" :disabled="isUploading">发送</button>
+            <button class="btn btn-primary btn-sm" @click="sendMessage" :disabled="isUploading">发送</button>
           </div>
         </div>
       </div>
@@ -659,7 +659,7 @@ watch(() => chat.value?.id, async (newId) => {
   <div class="friend-info-overlay" v-if="showFriendInfo" @click.self="closeFriendInfo">
     <div class="friend-info-panel">
       <div class="friend-info-header">
-        <button class="btn-close" @click="closeFriendInfo">←</button>
+        <button class="btn-close" @click="closeFriendInfo" aria-label="关闭">←</button>
         <h3>好友信息</h3>
       </div>
       <div class="friend-info-body" v-if="selectedFriend">
@@ -751,11 +751,6 @@ watch(() => chat.value?.id, async (newId) => {
   color: #868686;
 }
 
-.empty-content-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
 .chat-window {
   flex: 1;
   display: flex;
@@ -787,7 +782,7 @@ watch(() => chat.value?.id, async (newId) => {
 .chat-user-avatar {
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 8px;
   object-fit: cover;
 }
 
@@ -820,19 +815,23 @@ watch(() => chat.value?.id, async (newId) => {
 }
 
 .action-btn {
-  width: 34px;
-  height: 34px;
-  border: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
+  border: none;
+  border-radius: 50%;
   font-size: 18px;
   cursor: pointer;
-  border-radius: 50%;
   transition: all 0.2s;
+  color: #666;
 }
 
 .action-btn:hover {
-  background: #f0f0f0;
-  transform: scale(1.05);
+  background: rgba(18, 183, 245, 0.1);
+  color: #12b7f5;
 }
 
 .chat-messages {
@@ -871,7 +870,7 @@ watch(() => chat.value?.id, async (newId) => {
 .message-avatar-inner {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -976,22 +975,18 @@ watch(() => chat.value?.id, async (newId) => {
 }
 
 .image-btn {
-  padding: 0 16px;
-  border: none;
-  background: #f0f0f0;
-  border-radius: 20px;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  line-height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
 }
 
 .menu-container {
@@ -1007,35 +1002,51 @@ watch(() => chat.value?.id, async (newId) => {
 }
 
 .menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: block;
+  width: 100%;
   padding: 10px 16px;
+  text-align: left;
+  border: none;
+  background: none;
   cursor: pointer;
-  transition: background 0.2s;
+  font-size: 14px;
+  color: #475569;
+  transition: all 0.15s ease;
+  font-weight: 500;
+  border-radius: 8px;
 }
 
 .menu-item:hover {
-  background: #f5f5f5;
-}
-
-.menu-icon {
-  font-size: 20px;
+  background: #f1f5f9;
+  color: #1e293b;
 }
 
 .menu-text {
   font-size: 14px;
-  color: #333;
+  color: #475569;
 }
 
 .image-btn:hover:not(:disabled) {
-  background: #e0e0e0;
-  transform: scale(1.05);
+  background: rgba(18, 183, 245, 0.1);
+  color: #12b7f5;
 }
 
 .image-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.image-btn .is-loading {
+  animation: rotating 1.5s linear infinite;
+}
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .message-image-bubble {
@@ -1117,42 +1128,8 @@ watch(() => chat.value?.id, async (newId) => {
   color: #f44336;
 }
 
-.send-btn {
-  padding: 0 24px;
-  background: #12b7f5;
-  color: #fff;
-  border: none;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.input-row .btn.btn-primary.btn-sm {
   height: 44px;
-  min-height: 44px;
-  max-height: 44px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  line-height: 44px;
-}
-
-.send-btn:hover {
-  background: #108ee9;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(18, 183, 245, 0.3);
-}
-
-.send-btn:active {
-  transform: translateY(0);
-}
-
-.send-btn:disabled {
-  background: #b5b5b5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
 .chat-messages::-webkit-scrollbar {

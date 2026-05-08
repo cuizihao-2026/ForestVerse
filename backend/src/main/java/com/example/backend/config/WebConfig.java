@@ -17,8 +17,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:uploads/")
-                .setCachePeriod(604800) // 7天 = 7*24*60*60
-                .resourceChain(true);
+                .setCachePeriod(604800);
     }
 
     @Override

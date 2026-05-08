@@ -27,14 +27,9 @@ public class JwtUtils {
     }
 
     public String generateToken(Long userId, String username) {
-        return generateToken(userId, username, "USER");
-    }
-
-    public String generateToken(Long userId, String username, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
-        claims.put("role", role);
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtProperties.getExpiration());
@@ -46,14 +41,6 @@ public class JwtUtils {
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
                 .compact();
-    }
-
-    public String getRoleFromToken(String token) {
-        Claims claims = parseToken(token);
-        if (claims != null) {
-            return (String) claims.get("role");
-        }
-        return null;
     }
 
     public String getUsernameFromToken(String token) {

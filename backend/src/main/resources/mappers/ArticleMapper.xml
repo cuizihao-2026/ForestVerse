@@ -56,12 +56,14 @@
     </select>
 
     <select id="searchPublished" parameterType="String" resultMap="articleMap">
-        SELECT * FROM article 
-        WHERE status = 3 
-        AND (title LIKE CONCAT('%', #{keyword}, '%') 
-             OR category LIKE CONCAT('%', #{keyword}, '%') 
-             OR tags LIKE CONCAT('%', #{keyword}, '%'))
-        ORDER BY published_at DESC
+        SELECT DISTINCT a.* FROM article a
+        LEFT JOIN article_content ac ON a.id = ac.article_id
+        WHERE a.status = 3 
+        AND (a.title LIKE CONCAT('%', #{keyword}, '%') 
+             OR a.category LIKE CONCAT('%', #{keyword}, '%') 
+             OR a.tags LIKE CONCAT('%', #{keyword}, '%')
+             OR ac.content LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY a.published_at DESC
     </select>
 
     <insert id="insert" parameterType="com.example.backend.entity.Article" useGeneratedKeys="true" keyProperty="id">
@@ -119,16 +121,18 @@
     </select>
 
     <select id="findAllWithAuthorPaginated" resultMap="articleWithAuthorMap">
-        SELECT a.*,
+        SELECT DISTINCT a.*,
                u.nickname as author_nickname,
                u.username as author_username
         FROM article a
         LEFT JOIN user u ON a.user_id = u.id
+        LEFT JOIN article_content ac ON a.id = ac.article_id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (a.title LIKE CONCAT('%', #{keyword}, '%')
                      OR a.category LIKE CONCAT('%', #{keyword}, '%')
-                     OR a.tags LIKE CONCAT('%', #{keyword}, '%'))
+                     OR a.tags LIKE CONCAT('%', #{keyword}, '%')
+                     OR ac.content LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="status != null">
                 AND a.status = #{status}
@@ -139,13 +143,15 @@
     </select>
 
     <select id="countAllWithAuthor" resultType="long">
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT a.id)
         FROM article a
+        LEFT JOIN article_content ac ON a.id = ac.article_id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (a.title LIKE CONCAT('%', #{keyword}, '%')
                      OR a.category LIKE CONCAT('%', #{keyword}, '%')
-                     OR a.tags LIKE CONCAT('%', #{keyword}, '%'))
+                     OR a.tags LIKE CONCAT('%', #{keyword}, '%')
+                     OR ac.content LIKE CONCAT('%', #{keyword}, '%'))
             </if>
             <if test="status != null">
                 AND a.status = #{status}
@@ -162,20 +168,24 @@
     </select>
 
     <select id="searchPublishedPaginated" resultMap="articleMap">
-        SELECT * FROM article 
-        WHERE status = 3 
-        AND (title LIKE CONCAT('%', #{keyword}, '%') 
-             OR category LIKE CONCAT('%', #{keyword}, '%') 
-             OR tags LIKE CONCAT('%', #{keyword}, '%'))
-        ORDER BY published_at DESC
+        SELECT DISTINCT a.* FROM article a
+        LEFT JOIN article_content ac ON a.id = ac.article_id
+        WHERE a.status = 3 
+        AND (a.title LIKE CONCAT('%', #{keyword}, '%') 
+             OR a.category LIKE CONCAT('%', #{keyword}, '%') 
+             OR a.tags LIKE CONCAT('%', #{keyword}, '%')
+             OR ac.content LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY a.published_at DESC
         LIMIT #{offset}, #{size}
     </select>
 
     <select id="countSearchPublished" resultType="long">
-        SELECT COUNT(*) FROM article 
-        WHERE status = 3 
-        AND (title LIKE CONCAT('%', #{keyword}, '%') 
-             OR category LIKE CONCAT('%', #{keyword}, '%') 
-             OR tags LIKE CONCAT('%', #{keyword}, '%'))
+        SELECT COUNT(DISTINCT a.id) FROM article a
+        LEFT JOIN article_content ac ON a.id = ac.article_id
+        WHERE a.status = 3 
+        AND (a.title LIKE CONCAT('%', #{keyword}, '%') 
+             OR a.category LIKE CONCAT('%', #{keyword}, '%') 
+             OR a.tags LIKE CONCAT('%', #{keyword}, '%')
+             OR ac.content LIKE CONCAT('%', #{keyword}, '%'))
     </select>
 </mapper>

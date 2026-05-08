@@ -2,8 +2,13 @@ package com.example.backend.controller;
 
 import com.example.backend.config.WebsiteSettings;
 import com.example.backend.dto.ApiResponse;
+import com.example.backend.entity.User;
 import com.example.backend.service.BackupService;
 import com.example.backend.service.SettingsService;
+import com.example.backend.service.UserService;
+import com.example.backend.service.RolePermissionService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +31,12 @@ public class BackupController {
 
     private final BackupService backupService;
     private final SettingsService settingsService;
+    
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     public BackupController(BackupService backupService, SettingsService settingsService) {
         this.backupService = backupService;
@@ -33,8 +44,14 @@ public class BackupController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<ApiResponse<?>> listBackups() {
+    public ResponseEntity<ApiResponse<?>> listBackups(HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
             return ResponseEntity.ok(ApiResponse.success(backupService.listBackups()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -42,8 +59,14 @@ public class BackupController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<?>> createBackup() {
+    public ResponseEntity<ApiResponse<?>> createBackup(HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
             Map<String, String> result = backupService.createBackup();
             if ("error".equals(result.get("status"))) {
                 return ResponseEntity.badRequest().body(ApiResponse.error(result.get("message")));
@@ -55,8 +78,14 @@ public class BackupController {
     }
 
     @GetMapping("/download/{filename}")
-    public ResponseEntity<Resource> downloadBackup(@PathVariable String filename) {
+    public ResponseEntity<Resource> downloadBackup(@PathVariable String filename, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).build();
+            }
+            
             Path backupPath = Paths.get(System.getProperty("user.dir"), "backups", filename);
             if (!Files.exists(backupPath)) {
                 return ResponseEntity.notFound().build();
@@ -77,8 +106,14 @@ public class BackupController {
     }
 
     @PostMapping("/restore/{filename}")
-    public ResponseEntity<ApiResponse<?>> restoreBackup(@PathVariable String filename) {
+    public ResponseEntity<ApiResponse<?>> restoreBackup(@PathVariable String filename, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
             Map<String, Object> result = backupService.restoreBackup(filename);
             if ("error".equals(result.get("status"))) {
                 return ResponseEntity.badRequest().body(ApiResponse.error((String) result.get("message")));
@@ -90,8 +125,14 @@ public class BackupController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<ApiResponse<?>> uploadBackup(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse<?>> uploadBackup(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("请选择备份文件"));
             }
@@ -121,8 +162,14 @@ public class BackupController {
     }
 
     @PostMapping("/restore/upload")
-    public ResponseEntity<ApiResponse<?>> restoreFromUpload(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse<?>> restoreFromUpload(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("请选择备份文件"));
             }
@@ -146,8 +193,14 @@ public class BackupController {
     }
 
     @DeleteMapping("/{filename}")
-    public ResponseEntity<ApiResponse<?>> deleteBackup(@PathVariable String filename) {
+    public ResponseEntity<ApiResponse<?>> deleteBackup(@PathVariable String filename, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
             boolean deleted = backupService.deleteBackup(filename);
             if (deleted) {
                 return ResponseEntity.ok(ApiResponse.success("备份已删除"));
@@ -159,88 +212,108 @@ public class BackupController {
     }
 
     @GetMapping("/settings")
-    public ResponseEntity<ApiResponse<?>> getSettings() {
-        WebsiteSettings settings = settingsService.getSettings();
-        Map<String, Object> result = new HashMap<>();
-        result.put("enabled", settings.isBackupEnabled());
-        result.put("backupTime", settings.getBackupTime());
-        result.put("enableRetention", settings.isBackupRetentionEnabled());
-        result.put("retentionCount", settings.getBackupRetentionCount());
-        return ResponseEntity.ok(ApiResponse.success(result));
+    public ResponseEntity<ApiResponse<?>> getSettings(HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+            
+            WebsiteSettings settings = settingsService.getSettings();
+            Map<String, Object> result = new HashMap<>();
+            result.put("enabled", settings.isBackupEnabled());
+            result.put("backupTime", settings.getBackupTime());
+            result.put("enableRetention", settings.isBackupRetentionEnabled());
+            result.put("retentionCount", settings.getBackupRetentionCount());
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping("/settings")
-    public ResponseEntity<ApiResponse<?>> saveSettings(@RequestBody Map<String, Object> request) {
-        WebsiteSettings currentSettings = settingsService.getSettings();
-        WebsiteSettings newSettings = new WebsiteSettings();
-        
-        // 复制当前所有设置
-        newSettings.setHeartbeatEnabled(currentSettings.isHeartbeatEnabled());
-        newSettings.setHeartbeatRate(currentSettings.getHeartbeatRate());
-        newSettings.setHeartbeatTimeout(currentSettings.getHeartbeatTimeout());
-        newSettings.setEmailEnabled(currentSettings.isEmailEnabled());
-        newSettings.setEmailFrom(currentSettings.getEmailFrom());
-        newSettings.setVerificationCodeLength(currentSettings.getVerificationCodeLength());
-        newSettings.setVerificationCodeExpireMinutes(currentSettings.getVerificationCodeExpireMinutes());
-        newSettings.setSmtpHost(currentSettings.getSmtpHost());
-        newSettings.setSmtpPort(currentSettings.getSmtpPort());
-        newSettings.setSmtpUsername(currentSettings.getSmtpUsername());
-        newSettings.setSmtpPassword(currentSettings.getSmtpPassword());
-        newSettings.setSmtpSsl(currentSettings.isSmtpSsl());
-        newSettings.setCaptchaRegisterEnabled(currentSettings.isCaptchaRegisterEnabled());
-        newSettings.setCaptchaForgotPasswordEnabled(currentSettings.isCaptchaForgotPasswordEnabled());
-        newSettings.setCaptchaLoginEnabled(currentSettings.isCaptchaLoginEnabled());
-        newSettings.setCaptchaNoiseCount(currentSettings.getCaptchaNoiseCount());
-        newSettings.setCaptchaLineCount(currentSettings.getCaptchaLineCount());
-        newSettings.setCaptchaCodeLength(currentSettings.getCaptchaCodeLength());
-        newSettings.setCaptchaCaseSensitive(currentSettings.isCaptchaCaseSensitive());
-        newSettings.setCaptchaRotateEnabled(currentSettings.isCaptchaRotateEnabled());
-        newSettings.setArticleAuditEnabled(currentSettings.isArticleAuditEnabled());
-        newSettings.setCommentAuditEnabled(currentSettings.isCommentAuditEnabled());
-        newSettings.setSiteTitle(currentSettings.getSiteTitle());
-        newSettings.setSiteIcon(currentSettings.getSiteIcon());
-        newSettings.setSiteFavicon(currentSettings.getSiteFavicon());
-        newSettings.setAiProvider(currentSettings.getAiProvider());
-        newSettings.setAiApiKey(currentSettings.getAiApiKey());
-        newSettings.setAiBaseUrl(currentSettings.getAiBaseUrl());
-        newSettings.setAiModel(currentSettings.getAiModel());
-        newSettings.setAiSystemPrompt(currentSettings.getAiSystemPrompt());
-        newSettings.setAiArticleAuditPrompt(currentSettings.getAiArticleAuditPrompt());
-        newSettings.setAiCommentAuditPrompt(currentSettings.getAiCommentAuditPrompt());
-        newSettings.setAiReadingEnabled(currentSettings.isAiReadingEnabled());
-        newSettings.setAiArticleAuditEnabled(currentSettings.isAiArticleAuditEnabled());
-        newSettings.setAiCommentAuditEnabled(currentSettings.isAiCommentAuditEnabled());
-        newSettings.setAiArticleAutoAuditEnabled(currentSettings.isAiArticleAutoAuditEnabled());
-        newSettings.setAiCommentAutoAuditEnabled(currentSettings.isAiCommentAutoAuditEnabled());
-        
-        // 更新备份设置
-        if (request.containsKey("enabled")) {
-            newSettings.setBackupEnabled((Boolean) request.get("enabled"));
-        } else {
-            newSettings.setBackupEnabled(currentSettings.isBackupEnabled());
-        }
-        if (request.containsKey("backupTime")) {
-            newSettings.setBackupTime((String) request.get("backupTime"));
-        } else {
-            newSettings.setBackupTime(currentSettings.getBackupTime());
-        }
-        if (request.containsKey("enableRetention")) {
-            newSettings.setBackupRetentionEnabled((Boolean) request.get("enableRetention"));
-        } else {
-            newSettings.setBackupRetentionEnabled(currentSettings.isBackupRetentionEnabled());
-        }
-        if (request.containsKey("retentionCount")) {
-            Object countObj = request.get("retentionCount");
-            if (countObj instanceof Integer) {
-                newSettings.setBackupRetentionCount((Integer) countObj);
-            } else if (countObj instanceof Long) {
-                newSettings.setBackupRetentionCount(((Long) countObj).intValue());
+    public ResponseEntity<ApiResponse<?>> saveSettings(@RequestBody Map<String, Object> request, HttpServletRequest requestHttp) {
+        try {
+            Long userId = (Long) requestHttp.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "backup.manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
             }
-        } else {
-            newSettings.setBackupRetentionCount(currentSettings.getBackupRetentionCount());
+            
+            WebsiteSettings currentSettings = settingsService.getSettings();
+            WebsiteSettings newSettings = new WebsiteSettings();
+            
+            // 复制当前所有设置
+            newSettings.setHeartbeatEnabled(currentSettings.isHeartbeatEnabled());
+            newSettings.setHeartbeatRate(currentSettings.getHeartbeatRate());
+            newSettings.setHeartbeatTimeout(currentSettings.getHeartbeatTimeout());
+            newSettings.setEmailEnabled(currentSettings.isEmailEnabled());
+            newSettings.setEmailFrom(currentSettings.getEmailFrom());
+            newSettings.setVerificationCodeLength(currentSettings.getVerificationCodeLength());
+            newSettings.setVerificationCodeExpireMinutes(currentSettings.getVerificationCodeExpireMinutes());
+            newSettings.setSmtpHost(currentSettings.getSmtpHost());
+            newSettings.setSmtpPort(currentSettings.getSmtpPort());
+            newSettings.setSmtpUsername(currentSettings.getSmtpUsername());
+            newSettings.setSmtpPassword(currentSettings.getSmtpPassword());
+            newSettings.setSmtpSsl(currentSettings.isSmtpSsl());
+            newSettings.setCaptchaRegisterEnabled(currentSettings.isCaptchaRegisterEnabled());
+            newSettings.setCaptchaForgotPasswordEnabled(currentSettings.isCaptchaForgotPasswordEnabled());
+            newSettings.setCaptchaLoginEnabled(currentSettings.isCaptchaLoginEnabled());
+            newSettings.setCaptchaNoiseCount(currentSettings.getCaptchaNoiseCount());
+            newSettings.setCaptchaLineCount(currentSettings.getCaptchaLineCount());
+            newSettings.setCaptchaCodeLength(currentSettings.getCaptchaCodeLength());
+            newSettings.setCaptchaCaseSensitive(currentSettings.isCaptchaCaseSensitive());
+            newSettings.setCaptchaRotateEnabled(currentSettings.isCaptchaRotateEnabled());
+            newSettings.setArticleAuditEnabled(currentSettings.isArticleAuditEnabled());
+            newSettings.setCommentAuditEnabled(currentSettings.isCommentAuditEnabled());
+            newSettings.setSiteTitle(currentSettings.getSiteTitle());
+            newSettings.setSiteIcon(currentSettings.getSiteIcon());
+            newSettings.setSiteFavicon(currentSettings.getSiteFavicon());
+            newSettings.setAiProvider(currentSettings.getAiProvider());
+            newSettings.setAiApiKey(currentSettings.getAiApiKey());
+            newSettings.setAiBaseUrl(currentSettings.getAiBaseUrl());
+            newSettings.setAiModel(currentSettings.getAiModel());
+            newSettings.setAiSystemPrompt(currentSettings.getAiSystemPrompt());
+            newSettings.setAiArticleAuditPrompt(currentSettings.getAiArticleAuditPrompt());
+            newSettings.setAiCommentAuditPrompt(currentSettings.getAiCommentAuditPrompt());
+            newSettings.setAiReadingEnabled(currentSettings.isAiReadingEnabled());
+            newSettings.setAiArticleAuditEnabled(currentSettings.isAiArticleAuditEnabled());
+            newSettings.setAiCommentAuditEnabled(currentSettings.isAiCommentAuditEnabled());
+            newSettings.setAiArticleAutoAuditEnabled(currentSettings.isAiArticleAutoAuditEnabled());
+            newSettings.setAiCommentAutoAuditEnabled(currentSettings.isAiCommentAutoAuditEnabled());
+            
+            // 更新备份设置
+            if (request.containsKey("enabled")) {
+                newSettings.setBackupEnabled((Boolean) request.get("enabled"));
+            } else {
+                newSettings.setBackupEnabled(currentSettings.isBackupEnabled());
+            }
+            if (request.containsKey("backupTime")) {
+                newSettings.setBackupTime((String) request.get("backupTime"));
+            } else {
+                newSettings.setBackupTime(currentSettings.getBackupTime());
+            }
+            if (request.containsKey("enableRetention")) {
+                newSettings.setBackupRetentionEnabled((Boolean) request.get("enableRetention"));
+            } else {
+                newSettings.setBackupRetentionEnabled(currentSettings.isBackupRetentionEnabled());
+            }
+            if (request.containsKey("retentionCount")) {
+                Object countObj = request.get("retentionCount");
+                if (countObj instanceof Integer) {
+                    newSettings.setBackupRetentionCount((Integer) countObj);
+                } else if (countObj instanceof Long) {
+                    newSettings.setBackupRetentionCount(((Long) countObj).intValue());
+                }
+            } else {
+                newSettings.setBackupRetentionCount(currentSettings.getBackupRetentionCount());
+            }
+            
+            settingsService.updateSettings(newSettings);
+            return ResponseEntity.ok(ApiResponse.success("设置已保存"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
-        
-        settingsService.updateSettings(newSettings);
-        return ResponseEntity.ok(ApiResponse.success("设置已保存"));
     }
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { get, API_BASE_URL } from '../../utils/api'
-import { View, Star, Search, Loading } from '@element-plus/icons-vue'
+import { View, Search, Loading, Close, ChatDotRound } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -13,6 +13,9 @@ const loadingMore = ref(false)
 const hasMore = ref(true)
 const currentPage = ref(0)
 const searchKeyword = ref('')
+const searchInputRef = ref<HTMLElement | null>(null)
+const isFocused = ref(false)
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const pageSize = 12
 
 const loadArticles = async (reset: boolean = true) => {
@@ -67,18 +70,17 @@ const handleScroll = () => {
 }
 
 const handleSearch = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
   loadArticles(true)
 }
 
 const clearSearch = () => {
   searchKeyword.value = ''
+  if (debounceTimer) clearTimeout(debounceTimer)
   loadArticles(true)
-}
-
-const handleKeyPress = (e: KeyboardEvent) => {
-  if (e.key === 'Enter') {
-    handleSearch()
-  }
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
 }
 
 const handleArticleApproved = (event: any) => {
@@ -119,14 +121,33 @@ const viewArticle = (article: any) => {
   router.push(`/article/${article.id}`)
 }
 
-const formatDate = (dateStr: string) => {
+const formatRelativeTime = (dateStr: string) => {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return ''
+    
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+    const months = Math.floor(days / 30)
+    
+    if (seconds < 60) return '刚刚'
+    if (minutes < 60) return `${minutes}分钟前`
+    if (hours < 24) return `${hours}小时前`
+    if (days < 30) return `${days}天前`
+    if (months < 12) return `${months}个月前`
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch (e) {
+    return ''
+  }
 }
 
 const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
@@ -140,19 +161,35 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
         <h1 class="hero-title">探索精彩内容</h1>
         <p class="hero-desc">发现优质文章，分享你的见解与故事</p>
         <div class="search-block">
-          <div class="hero-search">
-            <el-input
+          <div class="hero-search" :class="{ 'is-focused': isFocused }">
+            <div class="search-icon-wrap">
+              <el-icon class="search-icon"><Search /></el-icon>
+            </div>
+            <input
+              ref="searchInputRef"
               v-model="searchKeyword"
-              :prefix-icon="Search"
-              placeholder="搜索文章标题、分类、标签..."
-              clearable
-              @keyup="handleKeyPress"
-              @clear="clearSearch"
-              class="search-input"
+              type="text"
+              placeholder="搜索文章标题、分类、标签、内容..."
+              class="search-input-field"
+              @focus="isFocused = true"
+              @blur="isFocused = false"
+              @keydown.enter="handleSearch"
             />
-            <el-button type="primary" @click="handleSearch" class="search-button">
-              搜索
-            </el-button>
+            <button
+              v-if="searchKeyword"
+              type="button"
+              class="search-clear-btn"
+              @click="clearSearch"
+            >
+              <el-icon><Close /></el-icon>
+            </button>
+            <button
+              type="button"
+              class="search-submit-btn"
+              @click="handleSearch"
+            >
+              <span class="search-btn-text">搜索</span>
+            </button>
           </div>
         </div>
       </div>
@@ -201,7 +238,12 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
               <img :src="imageUrl(article.cover)" :alt="article.title" />
             </div>
             <div v-else class="card-cover card-cover--empty">
-              <el-icon :size="40" color="#cbd5e1"><View /></el-icon>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>无封面</span>
             </div>
 
             <div class="card-body">
@@ -209,21 +251,26 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
                 <el-tag v-if="article.category" size="small" effect="plain" round>
                   {{ article.category }}
                 </el-tag>
-                <span class="card-date">{{ formatDate(article.createdAt) }}</span>
+                <span class="card-date">{{ formatRelativeTime(article.createdAt) }}</span>
+                <div class="card-stats">
+                  <span class="stat">
+                    <el-icon :size="14"><View /></el-icon>
+                    {{ article.views || 0 }}
+                  </span>
+                  <span class="stat stat-likes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    {{ article.likes || 0 }}
+                  </span>
+                  <span class="stat stat-comments">
+                    <el-icon :size="14"><ChatDotRound /></el-icon>
+                    {{ article.comments || 0 }}
+                  </span>
+                </div>
               </div>
 
               <h3 class="card-title">{{ article.title }}</h3>
-
-              <div class="card-stats">
-                <span class="stat">
-                  <el-icon :size="14"><View /></el-icon>
-                  {{ article.views || 0 }}
-                </span>
-                <span class="stat">
-                  <el-icon :size="14"><Star /></el-icon>
-                  {{ article.likes || 0 }}
-                </span>
-              </div>
             </div>
           </el-card>
         </div>
@@ -278,47 +325,47 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
 .hero-content {
   position: relative;
   z-index: 1;
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
 }
 
 .hero-title {
-  font-size: 36px;
+  font-size: 42px;
   font-weight: 800;
   color: #1e293b;
-  margin: 0 0 12px;
-  letter-spacing: -0.5px;
+  margin: 0 0 16px;
+  letter-spacing: -1px;
+  line-height: 1.1;
 }
 
 .hero-desc {
-  font-size: 16px;
+  font-size: 18px;
   color: #64748b;
-  margin: 0 0 28px;
+  margin: 0 0 32px;
+  line-height: 1.5;
 }
 
 .search-block {
-  max-width: 900px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 24px;
-  background: #ffffff;
-  border: 2px solid #e2e8f0;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
-.hero-search {
-  display: flex;
-  gap: 18px;
-  align-items: center;
+.hero-search .search-submit-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 12px 24px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
 }
 
-.search-input {
-  flex: 1;
+.hero-search .search-submit-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
 }
 
-.search-button {
-  padding: 14px 32px;
-  font-size: 16px;
+.hero-search .search-submit-btn:active {
+  transform: translateY(0);
 }
 
 /* ====== Section ====== */
@@ -389,8 +436,20 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
 
 .card-cover--empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  color: #cbd5e1;
+}
+
+.card-cover--empty svg {
+  width: 48px;
+  height: 48px;
+}
+
+.card-cover--empty span {
+  font-size: 12px;
 }
 
 .card-body {
@@ -402,18 +461,30 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .card-date {
   font-size: 13px;
   color: #94a3b8;
+  flex: 1;
+}
+
+.card-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.card-stats {
+  display: flex;
+  gap: 12px;
 }
 
 .card-title {
   font-size: 17px;
   font-weight: 600;
   color: #1e293b;
-  margin: 0 0 16px;
+  margin: 0;
   line-height: 1.45;
   display: -webkit-box;
   line-clamp: 2;
@@ -422,19 +493,22 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
   overflow: hidden;
 }
 
-.card-stats {
-  display: flex;
-  gap: 16px;
-  padding-top: 14px;
-  border-top: 1px solid #f1f5f9;
-}
-
 .stat {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 13px;
   color: #94a3b8;
+}
+
+.stat svg {
+  width: 14px;
+  height: 14px;
+}
+
+.stat .el-icon {
+  display: flex;
+  align-items: center;
 }
 
 /* ====== Load More ====== */
@@ -481,12 +555,8 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
     }
 
     .hero-search {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .search-input,
-    .search-button {
+        flex-direction: row;
+        flex-wrap: nowrap;
         width: 100%;
     }
 

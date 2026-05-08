@@ -8,14 +8,11 @@ import { loadSiteConfig } from './stores/siteConfig'
 const route = useRoute()
 const modalRef = ref<InstanceType<typeof SimpleModal> | null>(null)
 
-// 监听路由变化，动态控制滚动条显示
 const updateScrollbar = () => {
   if (route.path === '/home') {
-    // 首页隐藏滚动条
     document.documentElement.classList.add('hide-scrollbar')
     document.body.classList.add('hide-scrollbar')
   } else {
-    // 其他页面显示滚动条
     document.documentElement.classList.remove('hide-scrollbar')
     document.body.classList.remove('hide-scrollbar')
   }
@@ -27,7 +24,6 @@ onMounted(() => {
   if (modalRef.value) {
     initModal(modalRef.value)
   }
-  // 加载网站配置（包括 favicon 和页面标题）
   loadSiteConfig()
 })
 </script>
@@ -69,4 +65,7 @@ html, body, #app {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+
+
 </style>

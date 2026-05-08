@@ -2,7 +2,10 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.PageResponse;
 import com.example.backend.entity.Comment;
+import com.example.backend.entity.User;
 import com.example.backend.service.CommentService;
+import com.example.backend.service.UserService;
+import com.example.backend.service.RolePermissionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,10 +27,10 @@ public class CommentController {
     private CommentService commentService;
     
     @Autowired
-    private com.example.backend.service.UserService userService;
+    private UserService userService;
     
     @Autowired
-    private com.example.backend.service.RolePermissionService rolePermissionService;
+    private RolePermissionService rolePermissionService;
 
     @GetMapping("/article/{articleId}")
     public ResponseEntity<List<Comment>> getCommentsByArticle(@PathVariable Long articleId, HttpServletRequest request) {
@@ -53,7 +56,7 @@ public class CommentController {
             }
             
             // 检查评论权限
-            com.example.backend.entity.User user = userService.findById(userId);
+            User user = userService.findById(userId);
             if (user == null) {
                 return ResponseEntity.status(401).build();
             }
@@ -92,6 +95,17 @@ public class CommentController {
                 return ResponseEntity.status(401).build();
             }
             
+            // 检查评论权限
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.status(401).build();
+            }
+            
+            Set<String> permissions = rolePermissionService.getPermissionsByRoleName(user.getRole());
+            if (!permissions.contains("comment:use")) {
+                return ResponseEntity.status(403).build();
+            }
+            
             Comment comment = commentService.getCommentById(id);
             if (comment == null || !comment.getUserId().equals(userId)) {
                 return ResponseEntity.status(403).build();
@@ -121,13 +135,27 @@ public class CommentController {
                 return ResponseEntity.status(401).build();
             }
             
+            // 检查评论权限
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.status(401).build();
+            }
+            
+            Set<String> permissions = rolePermissionService.getPermissionsByRoleName(user.getRole());
+            if (!permissions.contains("comment:use")) {
+                return ResponseEntity.status(403).build();
+            }
+            
             Comment comment = commentService.getCommentById(id);
             if (comment == null) {
                 return ResponseEntity.notFound().build();
             }
             
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!comment.getUserId().equals(userId) && !Boolean.TRUE.equals(isAdmin)) {
+            User currentUser = userService.findById(userId);
+            Boolean hasCommentManagePermission = currentUser != null && 
+                rolePermissionService.hasPermission(currentUser.getRole(), "article:manage"); // 使用 article:manage 来代表内容管理权限
+            
+            if (!comment.getUserId().equals(userId) && !hasCommentManagePermission) {
                 return ResponseEntity.status(403).build();
             }
             
@@ -142,8 +170,9 @@ public class CommentController {
     @PutMapping("/{id}/approve")
     public ResponseEntity<Void> approveComment(@PathVariable Long id, HttpServletRequest request) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
                 return ResponseEntity.status(403).build();
             }
             
@@ -158,8 +187,9 @@ public class CommentController {
     @PutMapping("/{id}/reject")
     public ResponseEntity<Void> rejectComment(@PathVariable Long id, @RequestBody Map<String, String> payload, HttpServletRequest request) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
                 return ResponseEntity.status(403).build();
             }
             
@@ -174,8 +204,9 @@ public class CommentController {
     @GetMapping("/admin/pending")
     public ResponseEntity<List<Comment>> getPendingComments(HttpServletRequest request) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
                 return ResponseEntity.status(403).build();
             }
             
@@ -189,8 +220,9 @@ public class CommentController {
     @GetMapping("/all")
     public ResponseEntity<List<Comment>> getAllComments(HttpServletRequest request) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "article:manage")) {
                 return ResponseEntity.status(403).build();
             }
             
@@ -209,8 +241,9 @@ public class CommentController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "article:manage")) {
                 return ResponseEntity.status(403).build();
             }
             Integer statusValue = null;

@@ -1,14 +1,16 @@
 <template>
   <div class="rich-text-editor">
-    <div v-if="editor" class="editor-toolbar">
-      <button
-        type="button"
-        @click="editor.chain().focus().toggleBold().run()"
-        :class="['toolbar-btn', { active: editor.isActive('bold') }]"
-        title="加粗"
-      >
-        <strong>B</strong>
-      </button>
+    <div v-if="editor" class="editor-toolbar-container">
+      <button type="button" class="scroll-btn scroll-left" @click="scrollLeft" title="左移">◀</button>
+      <div ref="toolbarRef" class="editor-toolbar">
+        <button
+          type="button"
+          @click="editor.chain().focus().toggleBold().run()"
+          :class="['toolbar-btn', { active: editor.isActive('bold') }]"
+          title="加粗"
+        >
+          <strong>B</strong>
+        </button>
       <button
         type="button"
         @click="editor.chain().focus().toggleItalic().run()"
@@ -84,6 +86,8 @@
       >
         正文
       </button>
+      </div>
+      <button type="button" class="scroll-btn scroll-right" @click="scrollRight" title="右移">▶</button>
     </div>
     <div class="editor-area">
       <EditorContent :editor="editor" class="content-editable rich-content-wrapper" />
@@ -131,6 +135,19 @@ const activeSlashIndex = ref(0)
 const slashMenuStyle = ref({ top: '0px', left: '0px' })
 const slashQuery = ref('')
 const slashPos = ref(-1)
+const toolbarRef = ref<HTMLDivElement | null>(null)
+
+const scrollLeft = () => {
+  if (toolbarRef.value) {
+    toolbarRef.value.scrollBy({ left: -200, behavior: 'smooth' })
+  }
+}
+
+const scrollRight = () => {
+  if (toolbarRef.value) {
+    toolbarRef.value.scrollBy({ left: 200, behavior: 'smooth' })
+  }
+}
 
 interface SlashCommand {
   name: string
@@ -294,17 +311,47 @@ defineExpose({
   display: flex;
   flex-direction: column;
   position: relative;
+  height: 100%;
+  min-height: 0;
 }
 
-.editor-toolbar {
+.editor-toolbar-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 12px;
+  align-items: center;
   background: #f8fafc;
   border: 1px solid var(--border);
   border-radius: 8px 8px 0 0;
   border-bottom: none;
+}
+
+.scroll-btn {
+  padding: 12px 8px;
+  background: #f8fafc;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #64748b;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.scroll-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+}
+
+.editor-toolbar::-webkit-scrollbar {
+  display: none;
 }
 
 .toolbar-btn {
@@ -317,6 +364,8 @@ defineExpose({
   font-weight: 500;
   transition: all 0.2s;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .toolbar-btn:hover {
@@ -338,6 +387,10 @@ defineExpose({
 
 .editor-area {
   position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .content-editable {
@@ -346,6 +399,8 @@ defineExpose({
   border-radius: 0 0 8px 8px;
   overflow: hidden;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .content-editable:focus {
@@ -430,8 +485,9 @@ defineExpose({
 
 <style>
 .rich-text-editor .ProseMirror {
-  min-height: 400px;
-  max-height: 600px;
+  min-height: 100%;
+  max-height: 100%;
+  height: 100%;
   overflow-y: auto;
   padding: 16px;
   font-size: 17px;
@@ -439,6 +495,8 @@ defineExpose({
   outline: none;
   background: white;
   border-radius: 0 0 8px 8px;
+  display: flex;
+  flex-direction: column;
 }
 
 .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {

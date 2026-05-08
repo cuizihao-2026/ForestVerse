@@ -6,7 +6,7 @@
       
       <!-- 内容区域 -->
       <div class="admin-content">
-        <div v-if="currentPage === 'dashboard'" class="content-section">
+        <div v-if="currentPage === 'dashboard' && canAccessDashboard" class="content-section">
           <Dashboard />
         </div>
         
@@ -61,12 +61,13 @@ import AuditCenter from '../components/admin/AuditCenter.vue';
 import RoleManagement from '../components/admin/RoleManagement.vue';
 import BackupCenter from '../components/admin/BackupCenter.vue';
 import { fetchCurrentUser } from '../stores/auth';
-import { hasPermission, isAdmin } from '../stores/permission';
+import { hasPermission } from '../stores/permission';
 
 const router = useRouter();
 const currentPage = ref('dashboard');
 
-const canManageUsers = computed(() => hasPermission('user:manage'));
+const canAccessDashboard = computed(() => hasPermission('console.use'));
+const canManageUsers = computed(() => hasPermission('user:manage') || hasPermission('user.supermanage'));
 const canManageRoles = computed(() => hasPermission('role:manage'));
 const canManageArticles = computed(() => hasPermission('article:manage'));
 const canManageFiles = computed(() => hasPermission('file:manage'));
@@ -75,6 +76,9 @@ const canManageSettings = computed(() => hasPermission('site:manage'));
 const canManageBackups = computed(() => hasPermission('backup.manage'));
 
 const handlePageChange = (page: string) => {
+  if (page === 'dashboard' && !canAccessDashboard.value) {
+    return;
+  }
   if (page === 'users' && !canManageUsers.value) {
     return;
   }
@@ -103,33 +107,99 @@ onMounted(async () => {
   // 先获取用户信息
   await fetchCurrentUser();
   
-  // 检查是否是管理员
-  if (!isAdmin()) {
+  // 检查是否有 admin.use 权限
+  if (!hasPermission('admin.use')) {
     router.push('/home');
     return;
   }
   
-  // 如果当前页面是受限页面但用户没有对应权限，自动切换到控制台
+  // 检查用户是否有权限访问任何页面，如果没有，跳转到首页
+  let hasAccessToAnyPage = canAccessDashboard.value || 
+                          canManageUsers.value || 
+                          canManageRoles.value || 
+                          canManageArticles.value || 
+                          canManageFiles.value || 
+                          canManageReviews.value || 
+                          canManageSettings.value || 
+                          canManageBackups.value;
+  
+  if (!hasAccessToAnyPage) {
+    router.push('/home');
+    return;
+  }
+  
+  // 如果当前页面是受限页面但用户没有对应权限，自动切换到第一个有权限的页面
+  if (currentPage.value === 'dashboard' && !canAccessDashboard.value) {
+    if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
+  }
   if (currentPage.value === 'users' && !canManageUsers.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
   }
   if (currentPage.value === 'roles' && !canManageRoles.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
   }
   if (currentPage.value === 'content' && !canManageArticles.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
   }
   if (currentPage.value === 'attachments' && !canManageFiles.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
   }
   if (currentPage.value === 'audit' && !canManageReviews.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
   }
   if (currentPage.value === 'settings' && !canManageSettings.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageBackups.value) currentPage.value = 'backup';
   }
   if (currentPage.value === 'backup' && !canManageBackups.value) {
-    currentPage.value = 'dashboard';
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
   }
 });
 </script>

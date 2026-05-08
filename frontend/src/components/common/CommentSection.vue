@@ -32,9 +32,20 @@
       </div>
       <div v-else>
         <div v-for="comment in mainComments" :key="comment.id" class="comment-item">
-          <el-avatar :size="40" :src="comment.userAvatar || ''" class="comment-avatar">
+          <img 
+            v-if="comment.userAvatar" 
+            :src="comment.userAvatar" 
+            :alt="comment.userName || '用户头像'" 
+            class="comment-avatar avatar"
+            style="width: 40px; height: 40px;"
+          />
+          <div 
+            v-else 
+            class="comment-avatar avatar fallback"
+            style="width: 40px; height: 40px; font-size: 16px;"
+          >
             {{ (comment.userName || '用户')[0] }}
-          </el-avatar>
+          </div>
           <div class="comment-content-wrapper">
             <div class="comment-meta">
               <span class="comment-author">{{ comment.userName || '匿名用户' }}</span>
@@ -58,9 +69,20 @@
               <div v-else>
                 <div class="replies-list">
                   <div v-for="reply in getAllRepliesForRoot(comment.id)" :key="reply.id" class="comment-item reply-item">
-                    <el-avatar :size="32" :src="reply.userAvatar || ''" class="comment-avatar">
+                    <img 
+                      v-if="reply.userAvatar" 
+                      :src="reply.userAvatar" 
+                      :alt="reply.userName || '用户头像'" 
+                      class="comment-avatar avatar"
+                      style="width: 32px; height: 32px;"
+                    />
+                    <div 
+                      v-else 
+                      class="comment-avatar avatar fallback"
+                      style="width: 32px; height: 32px; font-size: 14px;"
+                    >
                       {{ (reply.userName || '用户')[0] }}
-                    </el-avatar>
+                    </div>
                     <div class="comment-content-wrapper">
                       <div class="comment-meta">
                         <span class="comment-author">{{ reply.userName || '匿名用户' }}</span>
@@ -98,9 +120,9 @@
                     </div>
                   </div>
                 </div>
-                <div class="collapse-btn" @click="expandedReplies.delete(comment.id)">
+                <button class="collapse-btn" @click="expandedReplies.delete(comment.id)" type="button">
                   收起回复
-                </div>
+                </button>
               </div>
             </div>
 
@@ -391,6 +413,8 @@ watch(() => props.articleId, () => {
 .comment-actions {
   display: flex;
   justify-content: flex-end;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .comment-list {
@@ -412,7 +436,7 @@ watch(() => props.articleId, () => {
 .comment-item {
   display: flex;
   gap: 12px;
-  padding: 12px 0;
+  padding: 6px 6px 6px 6px;
   border-bottom: 1px solid #f3f4f6;
 }
 
@@ -427,6 +451,8 @@ watch(() => props.articleId, () => {
 
 .comment-avatar {
   flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .comment-content-wrapper {

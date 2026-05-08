@@ -1,6 +1,50 @@
 <template>
   <div class="my-articles">
+    <!-- 汇总数据栏和按钮在同一行 -->
     <div class="header" v-if="!isEditing">
+      <!-- 汇总数据栏 -->
+      <div v-if="!loading" class="stats-row">
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.total }}</span>
+          <span class="stat-label">全部</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.published }}</span>
+          <span class="stat-label">已发布</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.pending }}</span>
+          <span class="stat-label">待审核</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.draft }}</span>
+          <span class="stat-label">草稿</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.totalViews }}</span>
+          <span class="stat-label">浏览</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.totalLikes }}</span>
+          <span class="stat-label">点赞</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats.totalComments }}</span>
+          <span class="stat-label">评论</span>
+        </div>
+        <div class="stat-divider" v-if="stats.rejected > 0"></div>
+        <div class="stat-item" v-if="stats.rejected > 0">
+          <span class="stat-value">{{ stats.rejected }}</span>
+          <span class="stat-label">驳回</span>
+        </div>
+      </div>
+      
       <button class="btn btn-primary" @click="startCreate">
         + 写文章
       </button>
@@ -12,7 +56,7 @@
     </div>
 
     <!-- 编辑界面 -->
-    <div v-else-if="isEditing">
+    <div v-else-if="isEditing" class="editor-wrapper">
       <ArticleEditor 
         :article="currentArticle" 
         @cancel="cancelEdit"
@@ -21,17 +65,33 @@
     </div>
 
     <!-- 列表界面 -->
-    <div v-else>
+    <div v-else class="list-wrapper">
       <div v-if="articles.length === 0" class="empty-state">
-        <div class="empty-icon">📝</div>
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
         <h3>暂无文章</h3>
         <p>还没有文章，快去写一篇吧！</p>
       </div>
 
       <div v-else class="articles-grid">
         <div v-for="article in articles" :key="article.id" class="article-card card card-hover">
-          <div class="article-cover" v-if="article.cover">
-            <img :src="API_BASE_URL + article.cover" :alt="article.title" class="cover-image">
+          <div class="article-cover">
+            <img v-if="article.cover" :src="API_BASE_URL + article.cover" :alt="article.title" class="cover-image">
+            <div v-else class="cover-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>无封面</span>
+            </div>
           </div>
           <div class="article-content">
             <div class="article-body">
@@ -62,22 +122,50 @@
               
               <div class="article-meta">
                 <div class="meta-left">
-                  <span class="meta-item">👁️ {{ article.views || 0 }}</span>
-                  <span class="meta-item">❤️ {{ article.likes || 0 }}</span>
-                  <span class="meta-item">💬 {{ article.comments || 0 }}</span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    {{ article.views || 0 }}
+                  </span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    {{ article.likes || 0 }}
+                  </span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                    {{ article.comments || 0 }}
+                  </span>
                 </div>
-                <span class="meta-time">{{ formatDate(article.createdAt) }}</span>
+                <span class="meta-time">{{ formatRelativeTime(article.createdAt) }}</span>
               </div>
             </div>
             <div class="article-actions">
               <button class="action-btn btn btn-sm btn-secondary" @click="viewArticle(article)" title="查看">
-                👁️ 查看
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                查看
               </button>
               <button class="action-btn btn btn-sm btn-secondary" @click="startEdit(article)" title="编辑">
-                ✏️ 编辑
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                编辑
               </button>
-              <button class="action-btn btn btn-sm btn-secondary" @click="deleteArticle(article)" title="删除">
-                🗑️ 删除
+              <button class="action-btn btn btn-sm btn-danger" @click="deleteArticle(article)" title="删除">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                删除
               </button>
             </div>
           </div>
@@ -101,10 +189,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { get, del, API_BASE_URL } from '../../utils/api'
 import { showModal } from '../../stores/modal'
+import { hasPermission } from '../../stores/permission'
 import ArticleEditor from '../common/ArticleEditor.vue'
 
 const router = useRouter()
@@ -134,6 +223,28 @@ const loading = ref(false)
 const isEditing = ref(false)
 const currentArticle = ref<Article | undefined>(undefined)
 
+const stats = computed(() => {
+  const total = articles.value.length
+  const draft = articles.value.filter(a => a.status === 0).length
+  const pending = articles.value.filter(a => a.status === 1).length
+  const rejected = articles.value.filter(a => a.status === 2).length
+  const published = articles.value.filter(a => a.status === 3).length
+  const totalViews = articles.value.reduce((sum, a) => sum + (a.views || 0), 0)
+  const totalLikes = articles.value.reduce((sum, a) => sum + (a.likes || 0), 0)
+  const totalComments = articles.value.reduce((sum, a) => sum + (a.comments || 0), 0)
+  
+  return {
+    total,
+    draft,
+    pending,
+    rejected,
+    published,
+    totalViews,
+    totalLikes,
+    totalComments
+  }
+})
+
 const statusMap: Record<number, string> = {
   0: '草稿',
   1: '待审核',
@@ -155,7 +266,7 @@ const getStatusClass = (status: number): string => {
   return classMap[status] || 'status-unknown'
 }
 
-const formatDate = (dateStr: any): string => {
+const formatRelativeTime = (dateStr: any): string => {
   if (!dateStr) return ''
   try {
     let date: Date
@@ -171,17 +282,33 @@ const formatDate = (dateStr: any): string => {
     
     if (isNaN(date.getTime())) return ''
     
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+    const months = Math.floor(days / 30)
+    const years = Math.floor(days / 365)
+    
+    if (seconds < 60) return '刚刚'
+    if (minutes < 60) return `${minutes}分钟前`
+    if (hours < 24) return `${hours}小时前`
+    if (days < 30) return `${days}天前`
+    if (months < 12) return `${months}个月前`
+    return `${years}年前`
   } catch (e) {
     return ''
   }
 }
 
 const loadArticles = async () => {
+  // 检查权限
+  if (!hasPermission('article:create')) {
+    router.push('/home')
+    return
+  }
+  
   loading.value = true
   try {
     const data = await get('/api/article/my')
@@ -190,8 +317,18 @@ const loadArticles = async () => {
     } else {
       articles.value = []
     }
-  } catch (error) {
+  } catch (error: any) {
     articles.value = []
+    if (error?.status === 403) {
+      showModal({
+        title: '权限不足',
+        message: '您没有访问此页面的权限',
+        type: 'error',
+        onConfirm: () => {
+          router.push('/home')
+        }
+      })
+    }
   } finally {
     loading.value = false
   }
@@ -273,14 +410,69 @@ onMounted(() => {
 <style scoped>
 .my-articles {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   font-family: var(--sans);
 }
 
 .header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-2xl);
+  padding: 20px 24px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+/* 汇总数据栏 */
+.stats-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  min-width: 70px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #e5e7eb;
+}
+
+.editor-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.list-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 .loading {
@@ -312,9 +504,10 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 48px;
-  margin-bottom: var(--spacing-md);
-  opacity: 0.5;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--spacing-md);
+  color: #d1d5db;
 }
 
 .empty-state h3 {
@@ -354,6 +547,27 @@ onMounted(() => {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  color: #d1d5db;
+  gap: 8px;
+}
+
+.cover-placeholder svg {
+  width: 48px;
+  height: 48px;
+}
+
+.cover-placeholder span {
+  font-size: 12px;
 }
 
 .article-content {
@@ -521,7 +735,13 @@ onMounted(() => {
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+}
+
+.meta-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
 }
 
 .meta-time {
@@ -555,6 +775,52 @@ onMounted(() => {
   flex: 1;
   font-size: 13px;
   padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.btn-danger:hover {
+  background: #fee2e2;
+}
+
+@media (max-width: 1024px) {
+  .header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .stats-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .stat-item {
+    padding: 8px 16px;
+    min-width: auto;
+  }
+  
+  .stat-divider {
+    display: none;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -570,10 +836,21 @@ onMounted(() => {
     width: 100%;
     height: 200px;
   }
-
+  
   .header {
-    flex-direction: column;
-    gap: var(--spacing-md);
+    padding: 12px;
+  }
+  
+  .stat-item {
+    padding: 6px 12px;
+  }
+  
+  .stat-value {
+    font-size: 18px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
   }
 }
 </style>

@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get } from '../utils/api'
-import { View } from '@element-plus/icons-vue'
+import { View, MoreFilled } from '@element-plus/icons-vue'
 import Navbar from '../components/home/Navbar.vue'
 import RichContentView from '../components/common/RichContentView.vue'
 import ArticleHero from '../components/article/ArticleHero.vue'
@@ -19,6 +19,7 @@ const richContentViewRef = ref()
 const commentCount = ref(0)
 const isArticleUnpublished = ref(false)
 const unpublishedInfo = ref<any>(null)
+const sidebarOpen = ref(false)
 
 const headings = computed(() => {
   if (richContentViewRef.value?.headings) {
@@ -153,8 +154,16 @@ onUnmounted(() => {
 
     <!-- Article Layout -->
     <div v-else class="article-layout">
+      <!-- 移动端侧边栏遮罩 -->
+      <div v-if="sidebarOpen" class="sidebar-overlay" @click="sidebarOpen = false"></div>
+      
       <!-- 正文区 -->
       <div class="article-main">
+        <!-- 移动端侧边栏开关按钮 -->
+        <button class="sidebar-toggle" @click="sidebarOpen = !sidebarOpen">
+          <el-icon><MoreFilled /></el-icon>
+        </button>
+        
         <!-- 封面 -->
         <ArticleHero
           v-if="article.cover"
@@ -192,13 +201,15 @@ onUnmounted(() => {
       </div>
 
       <!-- 侧边栏 -->
-      <ArticleSidebar
-        :article="article"
-        :headings="headings"
-        v-model:commentCount="commentCount"
-        @scroll-to-heading="scrollToHeading"
-        @refresh="loadArticle"
-      />
+      <div class="sidebar-wrapper" :class="{ 'sidebar-open': sidebarOpen }">
+        <ArticleSidebar
+          :article="article"
+          :headings="headings"
+          v-model:commentCount="commentCount"
+          @scroll-to-heading="scrollToHeading"
+          @refresh="loadArticle"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -235,11 +246,12 @@ onUnmounted(() => {
   display: flex;
   width: 100%;
   flex: 1;
-  padding: 12px 32px 12px;
+  padding: 12px 12px 12px;
   gap: 24px;
   align-items: stretch;
   box-sizing: border-box;
   margin-top: 68px;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
@@ -259,7 +271,7 @@ onUnmounted(() => {
 .title-section {
   padding: 36px 36px 0;
   border-bottom: 1px solid #e8ecf1;
-  margin-bottom: 32px;
+  margin-bottom: 0;
   padding-bottom: 24px;
 }
 
@@ -291,8 +303,74 @@ onUnmounted(() => {
 
 @media (max-width: 860px) {
   .article-layout {
-    flex-direction: column;
     padding: 12px;
+    position: relative;
+  }
+
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #6b7280;
+    color: white;
+    border: none;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+    transition: all 0.3s ease;
+  }
+
+  .sidebar-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(107, 114, 128, 0.5);
+    background: #4b5563;
+  }
+
+  .sidebar-toggle .el-icon {
+    font-size: 24px;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 997;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .sidebar-wrapper {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 90%;
+    max-width: 360px;
+    height: 100vh;
+    background: #fff;
+    z-index: 998;
+    transition: right 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    padding: 12px 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  .sidebar-wrapper.sidebar-open {
+    right: 0;
+  }
+
+  .sidebar-wrapper .article-sidebar {
+    width: 100%;
+    padding: 12px;
+    box-sizing: border-box;
   }
 
   .hero { height: 240px; }
@@ -313,5 +391,24 @@ onUnmounted(() => {
   .tags-row {
     padding: 0 20px 16px;
   }
+}
+
+@media (min-width: 861px) {
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .sidebar-wrapper {
+    display: block;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

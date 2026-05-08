@@ -4,12 +4,15 @@ import com.example.backend.dto.ApiResponse;
 import com.example.backend.entity.Article;
 import com.example.backend.entity.ArticleContent;
 import com.example.backend.entity.Comment;
+import com.example.backend.entity.User;
 import com.example.backend.mapper.ArticleContentMapper;
 import com.example.backend.mapper.ArticleMapper;
 import com.example.backend.mapper.CommentMapper;
 import com.example.backend.service.AIService;
 import com.example.backend.service.ArticleService;
 import com.example.backend.service.CommentService;
+import com.example.backend.service.RolePermissionService;
+import com.example.backend.service.UserService;
 import com.example.backend.service.impl.AIServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +56,12 @@ public class AIController {
 
     @Autowired
     private CommentService commentService;
+    
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+    private RolePermissionService rolePermissionService;
 
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<Map<String, String>>> chat(@RequestBody Map<String, Object> requestBody, HttpServletRequest request) {
@@ -60,6 +69,11 @@ public class AIController {
             Long userId = (Long) request.getAttribute("userId");
             if (userId == null) {
                 return ResponseEntity.status(401).body(ApiResponse.unauthorized("请先登录"));
+            }
+            
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "ai:assist")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
             }
 
             String userMessage = (String) requestBody.get("message");
@@ -93,6 +107,11 @@ public class AIController {
             Long userId = (Long) request.getAttribute("userId");
             if (userId == null) {
                 return ResponseEntity.status(401).body(ApiResponse.unauthorized("请先登录"));
+            }
+            
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
             }
 
             Article article = articleMapper.findById(articleId);
@@ -135,6 +154,11 @@ public class AIController {
             if (userId == null) {
                 return ResponseEntity.status(401).body(ApiResponse.unauthorized("请先登录"));
             }
+            
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
 
             Comment comment = commentMapper.findById(commentId);
             if (comment == null) {
@@ -173,6 +197,11 @@ public class AIController {
             if (userId == null) {
                 return ResponseEntity.status(401).body(ApiResponse.unauthorized("请先登录"));
             }
+            
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "ai:assist")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
 
             Map<String, Object> result = aiService.queryBalance();
             return ResponseEntity.ok(ApiResponse.success(result));
@@ -191,6 +220,13 @@ public class AIController {
                 Long userId = (Long) request.getAttribute("userId");
                 if (userId == null) {
                     emitter.send(SseEmitter.event().data("请先登录"));
+                    emitter.complete();
+                    return;
+                }
+                
+                User currentUser = userService.findById(userId);
+                if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "ai:assist")) {
+                    emitter.send(SseEmitter.event().data("权限不足"));
                     emitter.complete();
                     return;
                 }

@@ -3,7 +3,10 @@ package com.example.backend.controller;
 import com.example.backend.dto.ArticleDTO;
 import com.example.backend.dto.PageResponse;
 import com.example.backend.entity.Article;
+import com.example.backend.entity.User;
 import com.example.backend.service.ArticleService;
+import com.example.backend.service.RolePermissionService;
+import com.example.backend.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +25,20 @@ public class ArticleController {
     @Autowired
     private ArticleService articleService;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RolePermissionService rolePermissionService;
+
     @GetMapping("/list")
-    public ResponseEntity<?> getArticles(@RequestParam(required = false) Integer status) {
+    public ResponseEntity<?> getArticles(@RequestParam(required = false) Integer status, HttpServletRequest request) {
         try {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
             List<Article> articles;
             if (status != null) {
                 articles = articleService.getArticlesByStatus(status);
@@ -41,10 +55,17 @@ public class ArticleController {
     @GetMapping("/all")
     public ResponseEntity<?> getAllArticles(HttpServletRequest request) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null) {
+                return ResponseEntity.badRequest().body("当前用户不存在");
+            }
+
+            // 检查是否有 article:manage 权限
+            if (!rolePermissionService.hasPermission(currentUser.getRole(), "article:manage")) {
                 return ResponseEntity.status(403).body("需要管理员权限");
             }
+
             List<Article> articles = articleService.getAllArticlesWithAuthor();
             return ResponseEntity.ok(articles);
         } catch (Exception e) {
@@ -61,10 +82,17 @@ public class ArticleController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null) {
+                return ResponseEntity.badRequest().body("当前用户不存在");
+            }
+
+            // 检查是否有 article:manage 权限
+            if (!rolePermissionService.hasPermission(currentUser.getRole(), "article:manage")) {
                 return ResponseEntity.status(403).body("需要管理员权限");
             }
+
             Integer statusValue = null;
             if (status != null && !status.isEmpty()) {
                 try {
@@ -134,6 +162,10 @@ public class ArticleController {
     public ResponseEntity<?> getMyArticles(HttpServletRequest request) {
         try {
             Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "article:create")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
             List<Article> articles = articleService.getArticlesByUserId(userId);
             return ResponseEntity.ok(articles);
         } catch (Exception e) {
@@ -146,8 +178,14 @@ public class ArticleController {
     public ResponseEntity<?> getArticleDetail(@PathVariable Long id, HttpServletRequest request) {
         try {
             Long userId = (Long) request.getAttribute("userId");
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            ArticleDTO article = articleService.getArticleDetail(id, userId, isAdmin);
+            Boolean hasArticleManagePermission = false;
+            if (userId != null) {
+                User currentUser = userService.findById(userId);
+                if (currentUser != null) {
+                    hasArticleManagePermission = rolePermissionService.hasPermission(currentUser.getRole(), "article:manage");
+                }
+            }
+            ArticleDTO article = articleService.getArticleDetail(id, userId, hasArticleManagePermission);
             articleService.incrementViews(id);
             return ResponseEntity.ok(article);
         } catch (Exception e) {
@@ -163,6 +201,10 @@ public class ArticleController {
             if (userId == null) {
                 return ResponseEntity.status(401).body("请先登录");
             }
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "article:create")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
             ArticleDTO article = articleService.createArticle(userId, articleDTO);
             return ResponseEntity.ok(article);
         } catch (Exception e) {
@@ -175,8 +217,25 @@ public class ArticleController {
     public ResponseEntity<?> updateArticle(@PathVariable Long id, @RequestBody ArticleDTO articleDTO, HttpServletRequest request) {
         try {
             Long userId = (Long) request.getAttribute("userId");
-            ArticleDTO article = articleService.updateArticle(id, userId, articleDTO);
-            return ResponseEntity.ok(article);
+            User currentUser = userService.findById(userId);
+            if (currentUser == null) {
+                return ResponseEntity.status(401).body("请先登录");
+            }
+            // 检查是否有 article:create 权限
+            if (!rolePermissionService.hasPermission(currentUser.getRole(), "article:create")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
+            // 检查是否有 article:manage 权限或者是文章作者
+            Article article = articleService.getArticleById(id);
+            if (article == null) {
+                return ResponseEntity.badRequest().body("文章不存在");
+            }
+            boolean hasManagePermission = rolePermissionService.hasPermission(currentUser.getRole(), "article:manage");
+            if (!hasManagePermission && !article.getUserId().equals(userId)) {
+                return ResponseEntity.status(403).body("只能编辑自己的文章");
+            }
+            ArticleDTO updatedArticle = articleService.updateArticle(id, userId, articleDTO);
+            return ResponseEntity.ok(updatedArticle);
         } catch (Exception e) {
             logger.error("操作失败: " + e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -184,8 +243,13 @@ public class ArticleController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody StatusUpdateRequest request) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody StatusUpdateRequest request, HttpServletRequest httpRequest) {
         try {
+            Long userId = (Long) httpRequest.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "review:manage")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
             articleService.updateStatus(id, request.getStatus(), request.getRejectReason());
             return ResponseEntity.ok("状态更新成功");
         } catch (Exception e) {
@@ -239,10 +303,28 @@ public class ArticleController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteArticle(@PathVariable Long id, HttpServletRequest request) {
         try {
-            Boolean isAdmin = (Boolean) request.getAttribute("isAdmin");
-            if (!Boolean.TRUE.equals(isAdmin)) {
-                return ResponseEntity.status(403).body("需要管理员权限");
+            Long userId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(userId);
+            if (currentUser == null) {
+                return ResponseEntity.badRequest().body("当前用户不存在");
             }
+
+            // 检查是否有 article:create 权限
+            if (!rolePermissionService.hasPermission(currentUser.getRole(), "article:create")) {
+                return ResponseEntity.status(403).body("权限不足");
+            }
+
+            Article article = articleService.getArticleById(id);
+            if (article == null) {
+                return ResponseEntity.badRequest().body("文章不存在");
+            }
+
+            // 检查是否有 article:manage 权限或者是文章作者
+            boolean hasManagePermission = rolePermissionService.hasPermission(currentUser.getRole(), "article:manage");
+            if (!hasManagePermission && !article.getUserId().equals(userId)) {
+                return ResponseEntity.status(403).body("只能删除自己的文章");
+            }
+
             articleService.deleteArticle(id);
             return ResponseEntity.ok("删除成功");
         } catch (Exception e) {

@@ -64,16 +64,16 @@ public class ArticleServiceImpl implements ArticleService {
         return getArticleDetail(id, currentUserId, false);
     }
 
-    public ArticleDTO getArticleDetail(Long id, Long currentUserId, Boolean isAdmin) {
+    public ArticleDTO getArticleDetail(Long id, Long currentUserId, Boolean hasManagePermission) {
         Article article = articleMapper.findById(id);
         if (article == null) {
             throw new RuntimeException("文章不存在");
         }
 
-        // 检查文章状态：只有已发布的文章可以被访问，除非是作者本人或者管理员
+        // 检查文章状态：只有已发布的文章可以被访问，除非是作者本人或者有管理权限
         if (article.getStatus() != 3) { // 3 表示已发布
             if (currentUserId == null || !currentUserId.equals(article.getUserId())) {
-                if (!Boolean.TRUE.equals(isAdmin)) {
+                if (!Boolean.TRUE.equals(hasManagePermission)) {
                     throw new RuntimeException("文章尚未发布或已被驳回");
                 }
             }

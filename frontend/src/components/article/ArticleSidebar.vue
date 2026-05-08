@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, View, Star, StarFilled, List, ChatDotSquare, InfoFilled, MagicStick, ChatLineRound, Lock } from '@element-plus/icons-vue'
+import { ArrowLeft, View, List, ChatDotSquare, InfoFilled, MagicStick, ChatLineRound, Lock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -432,9 +432,10 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
                 :class="{ clickable: currentUser?.id !== article.userId }"
                 @click="handleAuthorClick"
               >
-                <el-avatar :size="56" :src="article.authorAvatar">
+                <img v-if="article.authorAvatar" :src="article.authorAvatar" :alt="article.authorName || '用户头像'" class="avatar huge border" />
+                <div v-else class="avatar huge border fallback">
                   {{ (article.authorName || '匿')[0] }}
-                </el-avatar>
+                </div>
                 <div class="author-info">
                   <strong>{{ article.authorName || '匿名用户' }}</strong>
                   <span class="author-date">发布于 {{ displayDate }}</span>
@@ -472,11 +473,14 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
                     <span class="data-label">评论</span>
                   </div>
                 </div>
-                <div class="data-item like-item" :class="{ liked: article.isLiked }" @click="toggleLike">
+                <div class="data-item like-item" :class="{ liked: article.isLiked }" @click="toggleLike" role="button" tabindex="0" @keydown.enter="toggleLike" :aria-pressed="article.isLiked" :aria-label="article.isLiked ? '取消点赞' : '点赞'">
                   <div class="data-icon-wrapper like-icon">
-                    <el-icon>
-                      <component :is="article.isLiked ? StarFilled : Star" />
-                    </el-icon>
+                    <svg v-if="article.isLiked" class="heart-icon filled" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    <svg v-else class="heart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
                   </div>
                   <div class="data-info">
                     <span class="data-value">{{ article.likes || 0 }}</span>
@@ -566,9 +570,9 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
               <!-- 欢迎信息 -->
               <div v-if="aiMessages.length === 0" class="ai-welcome">
                 <div class="ai-welcome-icon">
-                  <el-icon :size="48"><MagicStick /></el-icon>
+                  <img src="/src/assets/images/AI.jpg" alt="森小语" />
                 </div>
-                <h3>AI智能助手</h3>
+                <h3>森小语</h3>
                 <p>您好！我可以帮您：</p>
                 <ul class="ai-welcome-tips">
                   <li><el-icon><ChatLineRound /></el-icon> 总结文章内容</li>
@@ -654,7 +658,7 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
   flex-direction: column;
   gap: 16px;
   height: 100%;
-  padding: 24px 12px 24px 0;
+  padding: 12px 12px 12px 0;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -742,7 +746,13 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: none;
+}
+
+.info-tab-content::-webkit-scrollbar {
+  width: 0;
 }
 
 .info-block {
@@ -751,14 +761,28 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
 }
 
 .toc-block {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 200px;
+  max-height: 500px;
   overflow-y: auto;
-  min-height: 0;
-  scrollbar-width: none;
 }
 
 .toc-block::-webkit-scrollbar {
-  width: 0;
+  width: 6px;
+}
+
+.toc-block::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.toc-block::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.toc-block::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .section-title {
@@ -812,12 +836,17 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
   width: 80px;
   height: 80px;
   margin: 0 auto 20px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  overflow: hidden;
+}
+
+.ai-welcome-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .ai-welcome h3 {
@@ -1257,9 +1286,14 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
   transition: all 0.3s ease;
 }
 
-.like-icon .el-icon {
-  color: #64748b;
+.heart-icon {
+  width: 20px;
+  height: 20px;
   transition: all 0.3s ease;
+}
+
+.heart-icon.filled {
+  color: #dc2626;
 }
 
 .like-item.liked .like-icon {
@@ -1267,7 +1301,7 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
   animation: pulse-heart 0.4s ease;
 }
 
-.like-item.liked .like-icon .el-icon {
+.like-item.liked .like-icon .heart-icon {
   color: #dc2626;
 }
 
@@ -1373,7 +1407,7 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
     width: 100%;
     flex-direction: column;
     gap: 12px;
-    padding: 12px 0;
+    padding: 0;
   }
 
   .article-sidebar .back-btn-card {

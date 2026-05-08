@@ -4,6 +4,7 @@ import com.example.backend.entity.User;
 import com.example.backend.config.WebsiteSettings;
 import com.example.backend.service.SettingsService;
 import com.example.backend.service.UserService;
+import com.example.backend.service.RolePermissionService;
 import com.example.backend.utils.EmailUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,14 @@ public class SettingsController {
     private UserService userService;
     
     @Autowired
+    private RolePermissionService rolePermissionService;
+    
+    @Autowired
     private EmailUtils emailUtils;
+    
+    private boolean hasSiteManagePermission(User user) {
+        return rolePermissionService.hasPermission(user.getRole(), "site:manage");
+    }
 
     @GetMapping
     public ResponseEntity<?> getSettings(jakarta.servlet.http.HttpServletRequest request) {
@@ -36,7 +44,7 @@ public class SettingsController {
             Long userId = (Long) request.getAttribute("userId");
             User currentUser = userService.findById(userId);
             
-            if (!"SUPER_ADMIN".equals(currentUser.getRole())) {
+            if (!hasSiteManagePermission(currentUser)) {
                 return ResponseEntity.status(403).body("您没有权限访问此接口");
             }
             
@@ -53,7 +61,7 @@ public class SettingsController {
             Long userId = (Long) request.getAttribute("userId");
             User currentUser = userService.findById(userId);
             
-            if (!"SUPER_ADMIN".equals(currentUser.getRole())) {
+            if (!hasSiteManagePermission(currentUser)) {
                 return ResponseEntity.status(403).body("您没有权限修改此设置");
             }
             
@@ -72,7 +80,7 @@ public class SettingsController {
             Long userId = (Long) request.getAttribute("userId");
             User currentUser = userService.findById(userId);
             
-            if (!"SUPER_ADMIN".equals(currentUser.getRole())) {
+            if (!hasSiteManagePermission(currentUser)) {
                 return ResponseEntity.status(403).body("您没有权限访问此接口");
             }
             
@@ -103,7 +111,7 @@ public class SettingsController {
             Long userId = (Long) request.getAttribute("userId");
             User currentUser = userService.findById(userId);
             
-            if (!"SUPER_ADMIN".equals(currentUser.getRole())) {
+            if (!hasSiteManagePermission(currentUser)) {
                 return ResponseEntity.status(403).body("您没有权限修改此设置");
             }
             
@@ -133,7 +141,7 @@ public class SettingsController {
             Long userId = (Long) request.getAttribute("userId");
             User currentUser = userService.findById(userId);
             
-            if (!"SUPER_ADMIN".equals(currentUser.getRole())) {
+            if (!hasSiteManagePermission(currentUser)) {
                 return ResponseEntity.status(403).body("您没有权限访问此接口");
             }
             

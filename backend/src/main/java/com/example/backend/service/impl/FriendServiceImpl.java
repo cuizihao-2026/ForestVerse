@@ -174,6 +174,7 @@ public class FriendServiceImpl implements FriendService {
     public List<User> getFriends(Long userId) {
         List<Friendship> friendships = friendshipMapper.findByUserId(userId);
         return friendships.stream()
+                .filter(fs -> fs.getFriend() != null)
                 .map(fs -> {
                     User friend = fs.getFriend();
                     friend.setRemark(fs.getRemark());
@@ -217,6 +218,7 @@ public class FriendServiceImpl implements FriendService {
     public List<FriendWithChatInfo> getFriendsWithChatInfo(Long userId) {
         List<Friendship> friendships = friendshipMapper.findByUserId(userId);
         List<User> friends = friendships.stream()
+                .filter(fs -> fs.getFriend() != null)
                 .map(fs -> {
                     User friend = fs.getFriend();
                     friend.setRemark(fs.getRemark());

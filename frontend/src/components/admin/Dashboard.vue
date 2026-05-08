@@ -9,8 +9,8 @@
     </div>
     <div v-else class="user-list-view">
       <div class="view-header">
-        <button class="back-btn" @click="hideUserList">
-          <span class="back-icon">←</span>
+        <button class="back-btn" @click="hideUserList" aria-label="返回仪表盘">
+          <span class="back-icon" aria-hidden="true">←</span>
           返回
         </button>
         <h1>在线用户</h1>

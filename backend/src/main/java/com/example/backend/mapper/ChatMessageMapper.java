@@ -26,4 +26,8 @@ public interface ChatMessageMapper {
     List<Map<String, Object>> getLatestMessagesForFriends(@Param("userId") Long userId, @Param("friendIds") List<Long> friendIds);
     
     List<Map<String, Object>> getUnreadCountsForFriends(@Param("userId") Long userId, @Param("friendIds") List<Long> friendIds);
+
+    int updateContentByContent(@Param("oldContent") String oldContent, @Param("newContent") String newContent);
+
+    List<ChatMessage> findByContent(@Param("content") String content);
 }

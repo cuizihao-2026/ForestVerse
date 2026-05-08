@@ -21,6 +21,7 @@ public class BackupService {
 
     private static final String BACKUPS_DIR = "backups";
     private static final String UPLOADS_DIR = "uploads";
+    private static final String CONFIG_DIR = "config";
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyyMMdd_HHmmss");
 
     @Value("${spring.datasource.url}")
@@ -43,6 +44,10 @@ public class BackupService {
 
     private Path getUploadsPath() {
         return Paths.get(System.getProperty("user.dir"), UPLOADS_DIR);
+    }
+
+    private Path getConfigPath() {
+        return Paths.get(System.getProperty("user.dir"), CONFIG_DIR);
     }
 
     private String extractDatabaseName() {
@@ -69,6 +74,7 @@ public class BackupService {
             Path tempDir = Files.createTempDirectory("backup_");
             Path sqlFile = tempDir.resolve("database_" + timestamp + ".sql");
             Path uploadsZip = tempDir.resolve("uploads_" + timestamp + ".zip");
+            Path configZip = tempDir.resolve("config_" + timestamp + ".zip");
             Path finalZip = getBackupsPath().resolve(backupName);
 
             String dbName = extractDatabaseName();
@@ -98,10 +104,18 @@ public class BackupService {
                 zipDirectory(uploadsPath, uploadsZip);
             }
 
+            Path configPath = getConfigPath();
+            if (Files.exists(configPath)) {
+                zipDirectory(configPath, configZip);
+            }
+
             try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(finalZip))) {
                 addFileToZip(zos, sqlFile, "database_" + timestamp + ".sql");
                 if (Files.exists(uploadsZip)) {
                     addFileToZip(zos, uploadsZip, "uploads_" + timestamp + ".zip");
+                }
+                if (Files.exists(configZip)) {
+                    addFileToZip(zos, configZip, "config_" + timestamp + ".zip");
                 }
             }
 
@@ -169,17 +183,27 @@ public class BackupService {
                 }
             }
 
-            Optional<Path> uploadsZip = Files.list(tempDir)
+            List<Path> zipFiles = Files.list(tempDir)
                     .filter(p -> p.toString().endsWith(".zip"))
-                    .findFirst();
+                    .toList();
 
-            if (uploadsZip.isPresent()) {
-                Path uploadsPath = getUploadsPath();
-                if (Files.exists(uploadsPath)) {
-                    deleteDirectoryRecursively(uploadsPath);
+            for (Path zipFile : zipFiles) {
+                String fileName = zipFile.getFileName().toString();
+                if (fileName.startsWith("uploads_")) {
+                    Path uploadsPath = getUploadsPath();
+                    if (Files.exists(uploadsPath)) {
+                        deleteDirectoryRecursively(uploadsPath);
+                    }
+                    Files.createDirectories(uploadsPath);
+                    unzip(zipFile, uploadsPath);
+                } else if (fileName.startsWith("config_")) {
+                    Path configPath = getConfigPath();
+                    if (Files.exists(configPath)) {
+                        deleteDirectoryRecursively(configPath);
+                    }
+                    Files.createDirectories(configPath);
+                    unzip(zipFile, configPath);
                 }
-                Files.createDirectories(uploadsPath);
-                unzip(uploadsZip.get(), uploadsPath);
             }
 
             cleanTempDir(tempDir);

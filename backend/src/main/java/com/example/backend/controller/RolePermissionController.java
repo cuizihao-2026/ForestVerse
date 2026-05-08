@@ -21,16 +21,17 @@ public class RolePermissionController {
     @Autowired
     private UserService userService;
 
-    private boolean isSuperAdmin(HttpServletRequest request) {
+    private boolean hasRoleManagePermission(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return false;
         User user = userService.findById(userId);
-        return user != null && "SUPER_ADMIN".equals(user.getRole());
+        if (user == null) return false;
+        return rolePermissionService.hasPermission(user.getRole(), "role:manage");
     }
 
     @GetMapping
     public ResponseEntity<?> getAllRoles(HttpServletRequest request) {
-        if (!isSuperAdmin(request)) {
+        if (!hasRoleManagePermission(request)) {
             return ResponseEntity.status(403).body("权限不足");
         }
         List<RolePermission> roles = rolePermissionService.findAll();
@@ -39,7 +40,7 @@ public class RolePermissionController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getRoleById(@PathVariable Long id, HttpServletRequest request) {
-        if (!isSuperAdmin(request)) {
+        if (!hasRoleManagePermission(request)) {
             return ResponseEntity.status(403).body("权限不足");
         }
         RolePermission role = rolePermissionService.findById(id);
@@ -51,7 +52,7 @@ public class RolePermissionController {
 
     @PostMapping
     public ResponseEntity<?> createRole(@RequestBody RolePermission rolePermission, HttpServletRequest request) {
-        if (!isSuperAdmin(request)) {
+        if (!hasRoleManagePermission(request)) {
             return ResponseEntity.status(403).body("权限不足");
         }
         
@@ -67,7 +68,7 @@ public class RolePermissionController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateRole(@PathVariable Long id, @RequestBody RolePermission rolePermission, HttpServletRequest request) {
-        if (!isSuperAdmin(request)) {
+        if (!hasRoleManagePermission(request)) {
             return ResponseEntity.status(403).body("权限不足");
         }
         
@@ -80,7 +81,7 @@ public class RolePermissionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteRole(@PathVariable Long id, HttpServletRequest request) {
-        if (!isSuperAdmin(request)) {
+        if (!hasRoleManagePermission(request)) {
             return ResponseEntity.status(403).body("权限不足");
         }
         

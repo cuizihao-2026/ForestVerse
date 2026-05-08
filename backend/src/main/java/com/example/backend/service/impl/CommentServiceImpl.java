@@ -148,7 +148,6 @@ public class CommentServiceImpl implements CommentService {
         comment.setStatus(3);
         comment.setRejectReason(rejectReason);
         commentMapper.update(comment);
-        articleMapper.decrementComments(comment.getArticleId());
         
         // 发送驳回通知
         String message = "您的评论审核未通过";

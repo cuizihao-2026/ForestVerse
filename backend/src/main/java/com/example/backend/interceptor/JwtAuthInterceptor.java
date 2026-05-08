@@ -28,6 +28,12 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         }
 
         String path = request.getRequestURI();
+        
+        // 公开接口白名单
+        if (path.matches(".*/api/auth/.*")) {
+            return true;
+        }
+        
         boolean isPublicArticleGet = "GET".equalsIgnoreCase(request.getMethod()) && path.matches(".*/api/article/\\d+$");
         boolean isArticleSearch = "GET".equalsIgnoreCase(request.getMethod()) && path.matches(".*/api/article/search(/paginated)?$");
         boolean isArticlePublished = "GET".equalsIgnoreCase(request.getMethod()) && path.matches(".*/api/article/published(/paginated)?$");
@@ -53,7 +59,6 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
         String username = jwtUtils.getUsernameFromToken(token);
         Long userId = jwtUtils.getUserIdFromToken(token);
-        String role = jwtUtils.getRoleFromToken(token);
 
         if (username == null || userId == null) {
             if (isPublicEndpoint) return true;
@@ -68,10 +73,8 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        boolean isAdminRole = "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
         request.setAttribute("userId", userId);
         request.setAttribute("username", username);
-        request.setAttribute("isAdmin", isAdminRole);
 
         return true;
     }

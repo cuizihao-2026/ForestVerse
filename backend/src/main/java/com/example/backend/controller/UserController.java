@@ -121,15 +121,66 @@ public class UserController {
         }
     }
 
+    // 用户DTO，包含用户信息和权限
+    static class UserWithPermissions {
+        private User user;
+        private Set<String> permissions;
+
+        public UserWithPermissions(User user, Set<String> permissions) {
+            this.user = user;
+            this.permissions = permissions;
+        }
+
+        public User getUser() { return user; }
+        public Set<String> getPermissions() { return permissions; }
+    }
+
     @GetMapping("/all")
     public ResponseEntity<?> getAllUsers() {
         try {
             List<User> users = userService.findAllUsers();
-            return ResponseEntity.ok(users);
+            List<UserWithPermissions> usersWithPermissions = users.stream()
+                .map(user -> new UserWithPermissions(user, rolePermissionService.getPermissionsByRoleName(user.getRole())))
+                .toList();
+            return ResponseEntity.ok(usersWithPermissions);
         } catch (Exception e) {
             logger.error("获取所有用户失败: " + e.getMessage(), e);
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/role-permissions")
+    public ResponseEntity<?> getAllRolePermissions() {
+        try {
+            List<RolePermission> rolePermissions = rolePermissionService.findAll();
+            return ResponseEntity.ok(rolePermissions);
+        } catch (Exception e) {
+            logger.error("获取角色权限失败: " + e.getMessage(), e);
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // 检查是否可以管理目标用户
+    private boolean canManageUser(User currentUser, User targetUser) {
+        // 用户不能管理自己
+        if (targetUser.getId().equals(currentUser.getId())) return false;
+        
+        // 获取当前用户和目标用户的权限
+        Set<String> currentPermissions = rolePermissionService.getPermissionsByRoleName(currentUser.getRole());
+        Set<String> targetPermissions = rolePermissionService.getPermissionsByRoleName(targetUser.getRole());
+        
+        // 目标用户有 user.supermanage 权限，没人能管理/显示（包括其他 user.supermanage 用户）
+        if (targetPermissions.contains("user.supermanage")) return false;
+        
+        // 有 user.supermanage 权限的用户可以管理其他人
+        if (currentPermissions.contains("user.supermanage")) return true;
+        
+        // 当前用户有 user:manage 权限，只能管理没有 user:manage 的用户
+        if (currentPermissions.contains("user:manage")) {
+            return !targetPermissions.contains("user:manage");
+        }
+        
+        return false;
     }
 
     @PutMapping("/role/{userId}")
@@ -144,20 +195,37 @@ public class UserController {
                 return ResponseEntity.badRequest().body("当前用户不存在");
             }
 
+            // 检查是否有修改角色的权限
+            boolean hasUserManage = rolePermissionService.hasPermission(currentUser.getRole(), "user:manage");
+            boolean hasUserSuperManage = rolePermissionService.hasPermission(currentUser.getRole(), "user.supermanage");
+            
+            if (!hasUserManage && !hasUserSuperManage) {
+                return ResponseEntity.status(403).body("您没有权限修改角色");
+            }
+
             User targetUser = userService.findById(userId);
             if (targetUser == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
-            if ("SUPER_ADMIN".equals(targetUser.getRole())) {
-                return ResponseEntity.badRequest().body("无法修改超级管理员的角色");
+
+            // 检查是否可以管理该用户
+            if (!canManageUser(currentUser, targetUser)) {
+                return ResponseEntity.status(403).body("您没有权限管理该用户");
             }
 
-            if ("SUPER_ADMIN".equals(roleRequest.getRole())) {
-                return ResponseEntity.badRequest().body("无法将用户设置为超级管理员");
+            // 获取目标角色的权限
+            Set<String> targetRolePermissions = rolePermissionService.getPermissionsByRoleName(roleRequest.getRole());
+            
+            // 任何人都不能设置为有 user.supermanage 权限的角色
+            if (targetRolePermissions.contains("user.supermanage")) {
+                return ResponseEntity.status(403).body("您没有权限设置该角色");
             }
 
-            if ("ADMIN".equals(roleRequest.getRole()) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-                return ResponseEntity.badRequest().body("您没有权限任命管理员");
+            // 只有 user.supermanage 权限的用户，才能设置为有 user:manage 权限的角色
+            if (targetRolePermissions.contains("user:manage")) {
+                if (!hasUserSuperManage) {
+                    return ResponseEntity.status(403).body("您没有权限设置该角色");
+                }
             }
 
             userService.updateUserRole(userId, roleRequest.getRole());
@@ -169,9 +237,35 @@ public class UserController {
     }
 
     @PutMapping("/status/{userId}")
-    public ResponseEntity<?> updateUserStatus(@PathVariable Long userId, @RequestBody UserStatusUpdateRequest request) {
+    public ResponseEntity<?> updateUserStatus(jakarta.servlet.http.HttpServletRequest request, 
+                                             @PathVariable Long userId, 
+                                             @RequestBody UserStatusUpdateRequest statusRequest) {
         try {
-            userService.updateUserStatus(userId, request.getStatus());
+            Long currentUserId = (Long) request.getAttribute("userId");
+            User currentUser = userService.findById(currentUserId);
+            if (currentUser == null) {
+                return ResponseEntity.badRequest().body("当前用户不存在");
+            }
+
+            // 检查是否有 user:manage 或 user.supermanage 权限
+            boolean hasUserManage = rolePermissionService.hasPermission(currentUser.getRole(), "user:manage");
+            boolean hasUserSuperManage = rolePermissionService.hasPermission(currentUser.getRole(), "user.supermanage");
+            
+            if (!hasUserManage && !hasUserSuperManage) {
+                return ResponseEntity.status(403).body("您没有权限修改用户状态");
+            }
+
+            User targetUser = userService.findById(userId);
+            if (targetUser == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            // 检查是否可以管理该用户
+            if (!canManageUser(currentUser, targetUser)) {
+                return ResponseEntity.status(403).body("您没有权限管理该用户");
+            }
+
+            userService.updateUserStatus(userId, statusRequest.getStatus());
             return ResponseEntity.ok("状态更新成功");
         } catch (Exception e) {
             logger.error("更新用户状态失败: " + e.getMessage(), e);
@@ -194,20 +288,19 @@ public class UserController {
             }
 
             if (currentUserId.equals(userId)) {
-                if ("SUPER_ADMIN".equals(targetUser.getRole())) {
-                    return ResponseEntity.badRequest().body("超级管理员账户无法注销");
-                }
+                // 用户删除自己的账户
             } else {
-                if (!"ADMIN".equals(currentUser.getRole()) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-                    return ResponseEntity.badRequest().body("您没有权限删除其他用户");
+                // 检查是否有 user:manage 或 user.supermanage 权限
+                boolean hasUserManage = rolePermissionService.hasPermission(currentUser.getRole(), "user:manage");
+                boolean hasUserSuperManage = rolePermissionService.hasPermission(currentUser.getRole(), "user.supermanage");
+                
+                if (!hasUserManage && !hasUserSuperManage) {
+                    return ResponseEntity.status(403).body("您没有权限删除其他用户");
                 }
-
-                if ("SUPER_ADMIN".equals(targetUser.getRole()) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-                    return ResponseEntity.badRequest().body("您没有权限删除超级管理员");
-                }
-
-                if ("ADMIN".equals(targetUser.getRole()) && !"SUPER_ADMIN".equals(currentUser.getRole())) {
-                    return ResponseEntity.badRequest().body("您没有权限删除管理员");
+                
+                // 检查是否可以管理该用户
+                if (!canManageUser(currentUser, targetUser)) {
+                    return ResponseEntity.status(403).body("您没有权限删除该用户");
                 }
             }
 
