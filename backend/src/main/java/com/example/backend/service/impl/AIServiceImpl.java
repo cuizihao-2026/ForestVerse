@@ -830,4 +830,342 @@ public class AIServiceImpl implements AIService {
             handler.onError(e);
         }
     }
+
+    @Override
+    public String writingAssist(String taskType, String title, String content, String userPrompt) {
+        WebsiteSettings settings = settingsService.getSettings();
+        
+        if (!settings.isAiWritingEnabled()) {
+            return "AI写作助手未启用，请联系管理员配置";
+        }
+        
+        if (settings.getAiApiKey() == null || settings.getAiApiKey().isEmpty()) {
+            return "AI API密钥未配置，请联系管理员配置";
+        }
+        
+        try {
+            String provider = settings.getAiProvider();
+            String baseUrl = settings.getAiBaseUrl();
+            String apiKey = settings.getAiApiKey();
+            String model = settings.getAiModel();
+            
+            if (provider == null || provider.isEmpty()) {
+                provider = "deepseek";
+            }
+            
+            String systemPrompt = buildWritingSystemPrompt(taskType);
+            String finalPrompt = buildWritingUserPrompt(taskType, title, content, userPrompt);
+            
+            if ("anthropic".equals(provider)) {
+                return callAnthropicApiForWriting(systemPrompt, finalPrompt, baseUrl, apiKey, model);
+            } else {
+                return callOpenAiCompatibleApiForWriting(systemPrompt, finalPrompt, baseUrl, apiKey, model);
+            }
+            
+        } catch (Exception e) {
+            logger.error("AI写作助手调用失败: " + e.getMessage(), e);
+            return "AI服务调用失败: " + e.getMessage();
+        }
+    }
+    
+    @Override
+    public void streamWritingAssist(String taskType, String title, String content, String userPrompt, StreamResponseHandler handler) {
+        try {
+            WebsiteSettings settings = settingsService.getSettings();
+            
+            if (!settings.isAiWritingEnabled()) {
+                handler.onError(new RuntimeException("AI写作助手未启用"));
+                return;
+            }
+            
+            if (settings.getAiApiKey() == null || settings.getAiApiKey().isEmpty()) {
+                handler.onError(new RuntimeException("AI API密钥未配置"));
+                return;
+            }
+            
+            String provider = settings.getAiProvider();
+            String baseUrl = settings.getAiBaseUrl();
+            String apiKey = settings.getAiApiKey();
+            String model = settings.getAiModel();
+            
+            if (provider == null || provider.isEmpty()) {
+                provider = "deepseek";
+            }
+            
+            String systemPrompt = buildWritingSystemPrompt(taskType);
+            String finalPrompt = buildWritingUserPrompt(taskType, title, content, userPrompt);
+            
+            if ("anthropic".equals(provider)) {
+                streamAnthropicApiForWriting(systemPrompt, finalPrompt, baseUrl, apiKey, model, handler);
+            } else {
+                streamOpenAiCompatibleApiForWriting(systemPrompt, finalPrompt, baseUrl, apiKey, model, handler);
+            }
+            
+        } catch (Exception e) {
+            handler.onError(e);
+        }
+    }
+    
+    private String buildWritingSystemPrompt(String taskType) {
+        switch (taskType) {
+            case "continue":
+                return "你是一个专业的写作助手，擅长续写文章。请根据用户提供的内容，自然流畅地续写下去。注意保持原文的风格和语气。回答时直接返回续写的内容，不要有多余的开场白或解释。可以使用 Markdown 格式来增强可读性，比如 **加粗**、*斜体*、列表等。";
+            case "polish":
+                return "你是一个专业的写作助手，擅长润色文章。请优化用户提供的内容，使其更加通顺、优美、专业。注意保持原文的意思和主要观点。回答时直接返回润色后的内容，不要有多余的开场白或解释。可以使用 Markdown 格式来增强可读性，比如 **加粗**、*斜体*、列表等。";
+            case "summary":
+                return "你是一个专业的写作助手，擅长总结文章。请为用户提供的内容生成一个简洁清晰的摘要。摘要应包含文章的核心要点。回答时直接返回摘要内容，不要有多余的开场白或解释。可以使用 Markdown 格式来增强可读性，比如 **加粗**、*斜体*、列表等。";
+            case "translate":
+                return "你是一个专业的翻译助手。请将用户提供的内容翻译成流畅自然的英文。注意保持原文的意思和风格。回答时直接返回翻译后的内容，不要有多余的开场白或解释。";
+            case "outline":
+                return "你是一个专业的写作助手，擅长生成文章大纲。请根据用户提供的内容或主题，生成一个结构清晰、逻辑严谨的文章大纲。大纲应该包含主要章节和关键点。回答时直接返回大纲，使用 Markdown 列表格式，不要有多余的开场白或解释。";
+            case "title":
+                return "你是一个专业的写作助手，擅长拟写标题。请根据用户提供的内容，生成几个吸引人、准确、简洁的标题建议。回答时直接返回标题列表，每行一个标题，不要有多余的开场白或解释。";
+            default:
+                return "你是一个专业的写作助手，帮助用户完成各种写作任务。回答时可以使用 Markdown 格式来增强可读性，比如 **加粗**、*斜体*、列表、代码块等。请根据用户的需求给出高质量的回复。";
+        }
+    }
+    
+    private String buildWritingUserPrompt(String taskType, String title, String content, String userPrompt) {
+        StringBuilder prompt = new StringBuilder();
+        
+        if (title != null && !title.isEmpty()) {
+            prompt.append("【文章标题】\n").append(title).append("\n\n");
+        }
+        
+        if (content != null && !content.isEmpty()) {
+            prompt.append("【文章内容】\n").append(content).append("\n\n");
+        }
+        
+        if (userPrompt != null && !userPrompt.isEmpty()) {
+            prompt.append("【用户需求】\n").append(userPrompt).append("\n\n");
+        }
+        
+        return prompt.toString();
+    }
+    
+    private String callOpenAiCompatibleApiForWriting(String systemPrompt, String userPrompt, String baseUrl, String apiKey, String model) throws Exception {
+        String url = baseUrl + "/chat/completions";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+        
+        List<Map<String, String>> messages = new ArrayList<>();
+        
+        Map<String, String> systemMessage = new HashMap<>();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", systemPrompt);
+        messages.add(systemMessage);
+        
+        Map<String, String> userMsg = new HashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", userPrompt);
+        messages.add(userMsg);
+        
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", messages);
+        
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        
+        if (response.getStatusCode() == HttpStatus.OK) {
+            JsonNode responseJson = objectMapper.readTree(response.getBody());
+            JsonNode choices = responseJson.get("choices");
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                JsonNode message = choices.get(0).get("message");
+                if (message != null) {
+                    String content = message.get("content").asText();
+                    return content;
+                }
+            }
+            return "AI响应格式错误";
+        } else {
+            return "AI服务请求失败，状态码: " + response.getStatusCode();
+        }
+    }
+    
+    private String callAnthropicApiForWriting(String systemPrompt, String userPrompt, String baseUrl, String apiKey, String model) throws Exception {
+        String url = baseUrl + "/messages";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-api-key", apiKey);
+        headers.set("anthropic-version", "2023-06-01");
+        
+        List<Map<String, String>> messages = new ArrayList<>();
+        
+        Map<String, String> userMsg = new HashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", userPrompt);
+        messages.add(userMsg);
+        
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", messages);
+        requestBody.put("system", systemPrompt);
+        requestBody.put("max_tokens", 4096);
+        
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        
+        if (response.getStatusCode() == HttpStatus.OK) {
+            JsonNode responseJson = objectMapper.readTree(response.getBody());
+            JsonNode content = responseJson.get("content");
+            if (content != null && content.isArray() && content.size() > 0) {
+                JsonNode firstContent = content.get(0);
+                if (firstContent != null && firstContent.has("text")) {
+                    return firstContent.get("text").asText();
+                }
+            }
+            return "AI响应格式错误";
+        } else {
+            return "AI服务请求失败，状态码: " + response.getStatusCode();
+        }
+    }
+    
+    private void streamOpenAiCompatibleApiForWriting(String systemPrompt, String userPrompt, String baseUrl, String apiKey, String model, StreamResponseHandler handler) {
+        try {
+            String url = baseUrl + "/chat/completions";
+            
+            List<Map<String, String>> messages = new ArrayList<>();
+            
+            Map<String, String> systemMessage = new HashMap<>();
+            systemMessage.put("role", "system");
+            systemMessage.put("content", systemPrompt);
+            messages.add(systemMessage);
+            
+            Map<String, String> userMsg = new HashMap<>();
+            userMsg.put("role", "user");
+            userMsg.put("content", userPrompt);
+            messages.add(userMsg);
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", model);
+            requestBody.put("messages", messages);
+            requestBody.put("stream", true);
+            
+            String requestJson = objectMapper.writeValueAsString(requestBody);
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                    .build();
+            
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+                    .thenAccept(response -> {
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body(), "UTF-8"))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (line.startsWith("data: ")) {
+                                    String data = line.substring(6);
+                                    if ("[DONE]".equals(data)) {
+                                        break;
+                                    }
+                                    try {
+                                        JsonNode json = objectMapper.readTree(data);
+                                        JsonNode choices = json.get("choices");
+                                        if (choices != null && choices.isArray() && choices.size() > 0) {
+                                            JsonNode delta = choices.get(0).get("delta");
+                                            if (delta != null && delta.has("content") && !delta.get("content").isNull()) {
+                                                String content = delta.get("content").asText();
+                                                if (!content.isEmpty()) {
+                                                    handler.onChunk(content);
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        // 忽略解析错误
+                                    }
+                                }
+                            }
+                            handler.onComplete();
+                        } catch (Exception e) {
+                            handler.onError(e);
+                        }
+                    })
+                    .exceptionally(throwable -> {
+                        handler.onError(throwable);
+                        return null;
+                    });
+            
+        } catch (Exception e) {
+            handler.onError(e);
+        }
+    }
+    
+    private void streamAnthropicApiForWriting(String systemPrompt, String userPrompt, String baseUrl, String apiKey, String model, StreamResponseHandler handler) {
+        try {
+            String url = baseUrl + "/messages";
+            
+            List<Map<String, String>> messages = new ArrayList<>();
+            
+            Map<String, String> userMsg = new HashMap<>();
+            userMsg.put("role", "user");
+            userMsg.put("content", userPrompt);
+            messages.add(userMsg);
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", model);
+            requestBody.put("messages", messages);
+            requestBody.put("system", systemPrompt);
+            requestBody.put("max_tokens", 4096);
+            requestBody.put("stream", true);
+            
+            String requestJson = objectMapper.writeValueAsString(requestBody);
+            
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Content-Type", "application/json")
+                    .header("x-api-key", apiKey)
+                    .header("anthropic-version", "2023-06-01")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestJson))
+                    .build();
+            
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+                    .thenAccept(response -> {
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body(), "UTF-8"))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (line.startsWith("data: ")) {
+                                    String data = line.substring(6);
+                                    try {
+                                        JsonNode json = objectMapper.readTree(data);
+                                        String type = json.has("type") ? json.get("type").asText() : "";
+                                        if ("content_block_delta".equals(type)) {
+                                            JsonNode delta = json.get("delta");
+                                            if (delta != null && delta.has("text") && !delta.get("text").isNull()) {
+                                                String text = delta.get("text").asText();
+                                                if (!text.isEmpty()) {
+                                                    handler.onChunk(text);
+                                                }
+                                            }
+                                        } else if ("message_stop".equals(type)) {
+                                            break;
+                                        }
+                                    } catch (Exception e) {
+                                        // 忽略解析错误
+                                    }
+                                }
+                            }
+                            handler.onComplete();
+                        } catch (Exception e) {
+                            handler.onError(e);
+                        }
+                    })
+                    .exceptionally(throwable -> {
+                        handler.onError(throwable);
+                        return null;
+                    });
+            
+        } catch (Exception e) {
+            handler.onError(e);
+        }
+    }
 }

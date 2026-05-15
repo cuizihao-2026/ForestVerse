@@ -106,6 +106,7 @@ public class SettingsService {
         settings.setAiCommentAuditEnabled(false);
         settings.setAiArticleAutoAuditEnabled(false);
         settings.setAiCommentAutoAuditEnabled(false);
+        settings.setAiWritingEnabled(false);
         settings.setBackupEnabled(false);
         settings.setBackupTime("02:00");
         settings.setBackupRetentionEnabled(false);
@@ -232,6 +233,7 @@ public class SettingsService {
         currentSettings.setAiCommentAuditEnabled(newSettings.isAiCommentAuditEnabled());
         currentSettings.setAiArticleAutoAuditEnabled(newSettings.isAiArticleAutoAuditEnabled());
         currentSettings.setAiCommentAutoAuditEnabled(newSettings.isAiCommentAutoAuditEnabled());
+        currentSettings.setAiWritingEnabled(newSettings.isAiWritingEnabled());
         
         // 更新备份配置
         currentSettings.setBackupEnabled(newSettings.isBackupEnabled());

@@ -2,16 +2,16 @@ server:
   port: 8010
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: K9pQ2x7zR8yX3vA6wB5nM4kL2jH1gF0eD9cB8aZ7xW6vU5tS4rQ3pO2nM1lK0jI9hG8fE7dC6bA5a
   expiration: 86400000
 
 spring:
   application:
     name: Backend
   datasource:
-    url: jdbc:mysql://localhost:3306/forestverse?useSSL=true&requireSSL=true&verifyServerCertificate=false&serverTimezone=UTC
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:your_password_here}
+    url: jdbc:mysql://localhost:3306/backend?useSSL=true&requireSSL=true&verifyServerCertificate=false&serverTimezone=UTC
+    username: root
+    password: 19866800
     driver-class-name: com.mysql.cj.jdbc.Driver
   servlet:
     multipart:

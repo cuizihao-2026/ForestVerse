@@ -38,6 +38,7 @@ public class WebsiteSettings {
   private boolean aiCommentAuditEnabled;
   private boolean aiArticleAutoAuditEnabled;
     private boolean aiCommentAutoAuditEnabled;
+    private boolean aiWritingEnabled;
     private boolean backupEnabled;
     private String backupTime;
     private boolean backupRetentionEnabled;
@@ -369,5 +370,13 @@ public class WebsiteSettings {
 
     public void setAiCommentAuditPrompt(String aiCommentAuditPrompt) {
         this.aiCommentAuditPrompt = aiCommentAuditPrompt;
+    }
+
+    public boolean isAiWritingEnabled() {
+        return aiWritingEnabled;
+    }
+
+    public void setAiWritingEnabled(boolean aiWritingEnabled) {
+        this.aiWritingEnabled = aiWritingEnabled;
     }
 }

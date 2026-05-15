@@ -6,10 +6,10 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import { checkLoginStatus } from './stores/auth'
-
-// 先检查登录状态，再挂载应用
-checkLoginStatus()
+import './stores/websocket'
 
 const app = createApp(App).use(router).use(ElementPlus)
 
-app.mount('#app')
+checkLoginStatus().then(() => {
+  app.mount('#app')
+})

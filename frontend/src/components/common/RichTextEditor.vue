@@ -113,7 +113,6 @@
 import { ref, computed, onBeforeUnmount, watch } from 'vue'
 import { Editor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
 
@@ -264,7 +263,6 @@ const editor = new Editor({
         levels: [1, 2, 3, 4, 5]
       }
     }),
-    Underline,
     TextAlign.configure({
       types: ['heading', 'paragraph']
     }),

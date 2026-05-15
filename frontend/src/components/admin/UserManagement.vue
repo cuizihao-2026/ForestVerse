@@ -205,12 +205,13 @@ const getRolePermissions = (roleName: string): string[] => {
 
 // 获取当前用户可用的角色选项
 const getAvailableRoles = () => {
+  if (!Array.isArray(rolePermissions.value)) return [];
   const hasUserSuperManage = hasPermission('user.supermanage');
   const hasUserManage = hasPermission('user:manage');
 
   // 从角色权限配置中构建角色选项
   const allRoles = rolePermissions.value
-    .filter(rp => rp.roleName !== 'SUPER_ADMIN') // 排除超级管理员
+    .filter(rp => rp && rp.roleName && rp.roleName !== 'SUPER_ADMIN') // 排除超级管理员
     .map(rp => ({
       value: rp.roleName,
       text: rp.description || rp.roleName
@@ -237,6 +238,7 @@ const getAvailableRoles = () => {
 
 // 判断用户是否可以被当前用户管理
 const canManageUser = (targetUserData: any) => {
+  if (!targetUserData || !targetUserData.user) return false;
   const targetUser = targetUserData.user;
   const targetPermissions = new Set(targetUserData.permissions);
   
@@ -259,10 +261,11 @@ const canManageUser = (targetUserData: any) => {
 
 // 过滤用户列表
 const filteredUsers = computed(() => {
+  if (!Array.isArray(users.value)) return [];
   let filtered = users.value;
   
-  // 排除自己和无法管理的用户
-  filtered = filtered.filter(u => canManageUser(u));
+  // 过滤掉无效数据并排除无法管理的用户
+  filtered = filtered.filter(u => u && u.user && canManageUser(u));
   
   // 搜索和筛选
   return filtered.filter(userData => {

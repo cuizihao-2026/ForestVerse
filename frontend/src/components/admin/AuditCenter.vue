@@ -19,7 +19,6 @@
 
         <div v-else>
           <div v-if="articles.length === 0" class="empty-state">
-            <div class="empty-icon">📭</div>
             <h3>暂无待审核文章</h3>
             <p>目前没有需要审核的文章</p>
           </div>
@@ -27,7 +26,7 @@
           <div v-else>
             <div v-if="aiAuditEnabled" class="batch-actions">
               <button class="btn btn-info" @click="handleBatchAIAudit" :disabled="batchAuditing">
-                {{ batchAuditing ? '🤖 AI批量审核中...' : '🤖 AI批量审核所有' }}
+                {{ batchAuditing ? 'AI批量审核中...' : 'AI批量审核所有' }}
               </button>
               <span v-if="batchAuditProgress !== null" class="batch-progress">
                 已审核 {{ batchAuditProgress }}/{{ articles.length }}
@@ -53,14 +52,14 @@
                     </div>
                     <div class="article-meta">
                       <div class="meta-left">
-                        <span class="meta-item">📅 {{ formatDate(article.createdAt) }}</span>
-                        <span class="meta-item">👤 用户ID: {{ article.userId }}</span>
+                        <span class="meta-item">{{ formatDate(article.createdAt) }}</span>
+                        <span class="meta-item">用户ID: {{ article.userId }}</span>
                       </div>
                     </div>
                   </div>
                   <div class="article-actions">
                     <button class="action-btn btn btn-sm btn-primary" @click="startAudit(article)" title="开始审核">
-                      🔍 开始审核
+                      开始审核
                     </button>
                   </div>
                 </div>
@@ -106,12 +105,12 @@ interface Article {
 interface Tab {
   id: string
   label: string
-  icon: string
+  icon?: string
 }
 
 const tabs: Tab[] = [
-  { id: 'article', label: '文章审核', icon: '📝' },
-  { id: 'comment', label: '评论审核', icon: '💬' }
+  { id: 'article', label: '文章审核' },
+  { id: 'comment', label: '评论审核' }
 ]
 
 const activeTab = ref('article');

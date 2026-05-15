@@ -440,6 +440,27 @@ export const closeWebSocket = () => {
   emitWsStatus()
 }
 
+export const getWsStatus = () => {
+  let status = 'disconnected'
+  if (ws) {
+    switch (ws.readyState) {
+      case WebSocket.CONNECTING:
+        status = 'connecting'
+        break
+      case WebSocket.OPEN:
+        status = 'connected'
+        break
+      case WebSocket.CLOSING:
+        status = 'disconnecting'
+        break
+      case WebSocket.CLOSED:
+        status = 'disconnected'
+        break
+    }
+  }
+  return { status, lastHeartbeat: lastHeartbeatTime }
+}
+
 export const checkWsStatus = () => {
   emitWsStatus()
 }

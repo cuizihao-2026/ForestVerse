@@ -34,12 +34,19 @@
           <AuditCenter />
         </div>
         
+        <div v-else-if="currentPage === 'categories' && canManageCategories" class="content-section">
+          <CategoryManagement />
+        </div>
+        
         <div v-else-if="currentPage === 'backup' && canManageBackups" class="content-section">
           <BackupCenter />
         </div>
         
+        <div v-else-if="currentPage === 'feedback' && canManageFeedback" class="content-section">
+          <FeedbackManagement />
+        </div>
+        
         <div v-else class="content-section no-permission">
-          <div class="no-permission-icon">🔒</div>
           <h3>您没有权限访问此页面</h3>
           <p>请联系管理员获取相应权限</p>
         </div>
@@ -58,10 +65,12 @@ import WebsiteSettings from '../components/admin/WebsiteSettings.vue';
 import Dashboard from '../components/admin/Dashboard.vue';
 import AttachmentCenter from '../components/admin/AttachmentCenter.vue';
 import AuditCenter from '../components/admin/AuditCenter.vue';
+import CategoryManagement from '../components/admin/CategoryManagement.vue';
 import RoleManagement from '../components/admin/RoleManagement.vue';
 import BackupCenter from '../components/admin/BackupCenter.vue';
+import FeedbackManagement from '../components/admin/FeedbackManagement.vue';
 import { fetchCurrentUser } from '../stores/auth';
-import { hasPermission } from '../stores/permission';
+import { hasPermission, loadUserPermissions } from '../stores/permission';
 
 const router = useRouter();
 const currentPage = ref('dashboard');
@@ -74,6 +83,8 @@ const canManageFiles = computed(() => hasPermission('file:manage'));
 const canManageReviews = computed(() => hasPermission('review:manage'));
 const canManageSettings = computed(() => hasPermission('site:manage'));
 const canManageBackups = computed(() => hasPermission('backup.manage'));
+const canManageCategories = computed(() => hasPermission('article.class'));
+const canManageFeedback = computed(() => hasPermission('feedback.manage'));
 
 const handlePageChange = (page: string) => {
   if (page === 'dashboard' && !canAccessDashboard.value) {
@@ -100,12 +111,21 @@ const handlePageChange = (page: string) => {
   if (page === 'backup' && !canManageBackups.value) {
     return;
   }
+  if (page === 'categories' && !canManageCategories.value) {
+    return;
+  }
+  if (page === 'feedback' && !canManageFeedback.value) {
+    return;
+  }
   currentPage.value = page;
 };
 
 onMounted(async () => {
   // 先获取用户信息
   await fetchCurrentUser();
+  
+  // 重新加载权限，确保与服务器最新配置一致
+  await loadUserPermissions();
   
   // 检查是否有 admin.use 权限
   if (!hasPermission('admin.use')) {
@@ -121,7 +141,8 @@ onMounted(async () => {
                           canManageFiles.value || 
                           canManageReviews.value || 
                           canManageSettings.value || 
-                          canManageBackups.value;
+                          canManageBackups.value ||
+                          canManageFeedback.value;
   
   if (!hasAccessToAnyPage) {
     router.push('/home');
@@ -160,6 +181,17 @@ onMounted(async () => {
     if (canAccessDashboard.value) currentPage.value = 'dashboard';
     else if (canManageUsers.value) currentPage.value = 'users';
     else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageCategories.value) currentPage.value = 'categories';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
+  }
+  if (currentPage.value === 'categories' && !canManageCategories.value) {
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
     else if (canManageFiles.value) currentPage.value = 'attachments';
     else if (canManageReviews.value) currentPage.value = 'audit';
     else if (canManageSettings.value) currentPage.value = 'settings';
@@ -201,6 +233,16 @@ onMounted(async () => {
     else if (canManageReviews.value) currentPage.value = 'audit';
     else if (canManageSettings.value) currentPage.value = 'settings';
   }
+  if (currentPage.value === 'feedback' && !canManageFeedback.value) {
+    if (canAccessDashboard.value) currentPage.value = 'dashboard';
+    else if (canManageUsers.value) currentPage.value = 'users';
+    else if (canManageRoles.value) currentPage.value = 'roles';
+    else if (canManageArticles.value) currentPage.value = 'content';
+    else if (canManageFiles.value) currentPage.value = 'attachments';
+    else if (canManageReviews.value) currentPage.value = 'audit';
+    else if (canManageSettings.value) currentPage.value = 'settings';
+    else if (canManageBackups.value) currentPage.value = 'backup';
+  }
 });
 </script>
 
@@ -209,7 +251,7 @@ onMounted(async () => {
   min-height: 100vh;
   background: #f5f7fa;
   padding: 0;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
   margin: 0;
   overflow: hidden;
 }

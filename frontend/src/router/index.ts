@@ -55,6 +55,12 @@ const routes = [
     name: 'Friends',
     component: () => import('../views/Friends.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/feedback',
+    name: 'Feedback',
+    component: () => import('../views/Feedback.vue'),
+    meta: { requiresAuth: false }
   }
 ]
 

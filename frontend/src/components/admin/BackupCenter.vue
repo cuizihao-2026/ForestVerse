@@ -4,7 +4,9 @@
     <!-- 快速操作 -->
     <div class="quick-actions">
       <div class="action-card card card-hover">
-        <div class="action-icon">💾</div>
+        <div class="action-icon">
+          <el-icon :size="40"><Folder /></el-icon>
+        </div>
         <h3>创建备份</h3>
         <p>立即创建完整备份（数据库 + 上传文件）</p>
         <button class="btn btn-primary" @click="createBackup" :disabled="isCreating">
@@ -13,7 +15,9 @@
         </button>
       </div>
       <div class="action-card card card-hover">
-        <div class="action-icon">📥</div>
+        <div class="action-icon">
+          <el-icon :size="40"><Upload /></el-icon>
+        </div>
         <h3>上传备份</h3>
         <p>上传备份文件到备份列表</p>
         <input type="file" ref="restoreFileInput" @change="handleRestoreFile" accept=".zip" style="display: none;">
@@ -74,16 +78,16 @@
       <div class="backup-list">
         <div v-for="backup in backups" :key="backup.name" class="backup-item card card-hover" :class="{ 'backup-item-loading': restoringBackup === backup.name }">
           <div class="backup-info">
-            <div class="backup-icon">
-              <span v-if="restoringBackup !== backup.name">💾</span>
-              <span v-else class="loading-spinner"></span>
+            <div v-if="restoringBackup === backup.name" class="loading-spinner"></div>
+            <div v-else class="backup-icon">
+              <el-icon :size="32"><Document /></el-icon>
             </div>
             <div class="backup-details">
               <div class="backup-name">{{ backup.name }}</div>
               <div class="backup-meta">
-                <span v-if="restoringBackup !== backup.name">📅 {{ backup.createdAt }}</span>
-                <span v-else class="restoring-text">⏳ 正在恢复中...</span>
-                <span>📊 {{ backup.size }}</span>
+                <span v-if="restoringBackup !== backup.name">{{ backup.createdAt }}</span>
+                <span v-else class="restoring-text">正在恢复中...</span>
+                <span>{{ backup.size }}</span>
               </div>
             </div>
           </div>
@@ -106,6 +110,7 @@ import { ref, onMounted } from 'vue';
 import { get, post, del } from '../../utils/api';
 import { getToken } from '../../stores/auth';
 import { showModal, showConfirm } from '../../stores/modal';
+import { Folder, Upload, Document } from '@element-plus/icons-vue';
 
 const restoreFileInput = ref<HTMLInputElement | null>(null);
 const autoBackupEnabled = ref(false);
@@ -408,8 +413,14 @@ onMounted(() => {
 }
 
 .action-icon {
-  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: var(--spacing-sm);
+}
+
+.action-icon .el-icon {
+  color: #64748b;
 }
 
 .action-card h3 {
@@ -468,7 +479,13 @@ onMounted(() => {
 }
 
 .backup-icon {
-  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backup-icon .el-icon {
+  color: #64748b;
 }
 
 .backup-name {

@@ -403,7 +403,7 @@ const handleSearchAllUsers = async () => {
     searching.value = true
     try {
       const res = await searchUsers(searchUserQuery.value.trim())
-      if (res.success) {
+      if (res.code === 200) {
         searchResults.value = res.data
       }
     } catch (err) {

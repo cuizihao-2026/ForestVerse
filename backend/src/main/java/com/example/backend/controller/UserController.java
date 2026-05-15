@@ -9,6 +9,7 @@ import com.example.backend.entity.RolePermission;
 import com.example.backend.service.UserService;
 import com.example.backend.service.TokenService;
 import com.example.backend.service.RolePermissionService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -110,7 +111,7 @@ public class UserController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         try {
             userService.changePassword(request.getUserId(), request.getOldPassword(), request.getNewPassword());
             tokenService.clearActiveToken(request.getUserId());

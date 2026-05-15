@@ -110,18 +110,17 @@
                   <span class="article-status" :class="getStatusClass(article.status)" v-else>
                     {{ getStatusText(article.status) }}
                   </span>
-                  <span v-if="article.category" class="article-category">
-                    {{ article.category }}
-                  </span>
                 </div>
-              </div>
-              
-              <div class="article-tags" v-if="article.tags">
-                <span class="tag" v-for="tag in article.tags.split(',').slice(0, 4)" :key="tag">{{ tag.trim() }}</span>
               </div>
               
               <div class="article-meta">
                 <div class="meta-left">
+                  <span v-if="article.category" class="article-category">
+                    {{ article.category }}
+                  </span>
+                  <template v-if="article.tags">
+                    <span class="tag" v-for="tag in article.tags.split(',').slice(0, 4)" :key="tag">{{ tag.trim() }}</span>
+                  </template>
                   <span class="meta-item">
                     <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -748,19 +747,14 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.article-tags {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
 .tag {
   padding: 3px 8px;
-  border-radius: 3px;
+  border-radius: 5px;
   font-size: 11px;
-  background: #f1f5f9;
+  font-weight: 500;
+  background: #f8fafc;
   color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .article-actions {

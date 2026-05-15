@@ -152,7 +152,7 @@ watch(() => props.visible, (newVal) => {
   margin-bottom: 20px;
   font-size: 20px;
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .modal-content {
@@ -162,7 +162,7 @@ watch(() => props.visible, (newVal) => {
 .modal-content p {
   color: #333;
   margin-bottom: 20px;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .captcha-container {
@@ -230,7 +230,7 @@ watch(() => props.visible, (newVal) => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .cancel-button {

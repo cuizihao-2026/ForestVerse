@@ -28,7 +28,6 @@
       </div>
       
       <div v-if="displayUsers.length === 0" class="empty-state">
-        <div class="empty-icon">📭</div>
         <p>{{ searchQuery ? '未找到匹配的用户' : '暂无在线用户' }}</p>
       </div>
       <div v-else class="user-list">

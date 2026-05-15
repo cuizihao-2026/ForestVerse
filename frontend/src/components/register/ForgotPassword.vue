@@ -212,8 +212,8 @@ const handleSubmit = async () => {
     return
   }
 
-  if (form.value.newPassword.length < 6) {
-    errorMessage.value = '密码长度不能少于6位'
+  if (form.value.newPassword.length < 8) {
+    errorMessage.value = '密码长度不能少于8位'
     return
   }
 
@@ -359,7 +359,7 @@ onUnmounted(() => {
   margin-bottom: 30px;
   font-size: 24px;
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .forgot-password-content {
@@ -384,7 +384,7 @@ onUnmounted(() => {
   margin-bottom: 8px;
   color: #333;
   font-weight: 500;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .form-group input {
@@ -471,7 +471,7 @@ input[type="password"] {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
   white-space: nowrap;
 }
 
@@ -497,7 +497,7 @@ input[type="password"] {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
   margin-top: 10px;
 }
 
@@ -535,7 +535,7 @@ input[type="password"] {
   margin-top: 20px;
   text-align: center;
   color: #333;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .login-link a {
@@ -583,7 +583,7 @@ input[type="password"] {
 
 .loading-text {
   color: #333;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
   font-size: 16px;
 }
 

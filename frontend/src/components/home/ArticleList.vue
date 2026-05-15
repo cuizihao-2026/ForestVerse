@@ -251,6 +251,21 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
                 <el-tag v-if="article.category" size="small" effect="plain" round>
                   {{ article.category }}
                 </el-tag>
+                <template v-if="article.tags">
+                  <el-tag
+                    v-for="tag in article.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t).slice(0, 3)"
+                    :key="tag"
+                    size="small"
+                    effect="plain"
+                    round
+                    class="card-tag"
+                  >
+                    {{ tag }}
+                  </el-tag>
+                  <span v-if="(article.tags.split(',').filter((t: string) => t.trim()).length) > 3" class="card-tag-more">
+                    +{{ (article.tags.split(',').filter((t: string) => t.trim()).length) - 3 }}
+                  </span>
+                </template>
                 <span class="card-date">{{ formatRelativeTime(article.createdAt) }}</span>
                 <div class="card-stats">
                   <span class="stat">
@@ -459,15 +474,26 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
 .card-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+}
+
+.card-tag {
+  color: #64748b !important;
+  border-color: #e2e8f0 !important;
+}
+
+.card-tag-more {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 .card-date {
   font-size: 13px;
   color: #94a3b8;
-  flex: 1;
+  margin-left: auto;
 }
 
 .card-stats {

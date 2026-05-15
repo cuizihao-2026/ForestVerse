@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import HeartbeatSettings from './HeartbeatSettings.vue';
 import EmailSettings from './EmailSettings.vue';
 import SecuritySettings from './SecuritySettings.vue';
@@ -140,21 +140,22 @@ interface WebsiteSettings {
   aiCommentAuditEnabled: boolean;
   aiArticleAutoAuditEnabled: boolean;
   aiCommentAutoAuditEnabled: boolean;
+  aiWritingEnabled: boolean;
 }
 
 interface Tab {
   id: string
   label: string
-  icon: string
+  icon?: string
 }
 
 const tabs: Tab[] = [
-  { id: 'heartbeat', label: '心跳设置', icon: '💓' },
-  { id: 'security', label: '安全设置', icon: '🔒' },
-  { id: 'email', label: '邮件配置', icon: '📧' },
-  { id: 'ai', label: 'AI 设置', icon: '🤖' },
-  { id: 'user', label: '用户设置', icon: '👤' },
-  { id: 'site', label: '网站设置', icon: '⚙️' }
+  { id: 'heartbeat', label: '心跳设置' },
+  { id: 'security', label: '安全设置' },
+  { id: 'email', label: '邮件配置' },
+  { id: 'ai', label: 'AI 设置' },
+  { id: 'user', label: '用户设置' },
+  { id: 'site', label: '网站设置' }
 ]
 
 const activeTab = ref<string>('heartbeat')
@@ -196,7 +197,8 @@ const originalSettings = ref<WebsiteSettings>({
   aiArticleAuditEnabled: false,
   aiCommentAuditEnabled: false,
   aiArticleAutoAuditEnabled: false,
-  aiCommentAutoAuditEnabled: false
+  aiCommentAutoAuditEnabled: false,
+  aiWritingEnabled: false
 })
 
 const editingSettings = ref<WebsiteSettings>({ ...originalSettings.value })
@@ -247,7 +249,8 @@ const hasUnsavedChanges = computed(() => {
     editingSettings.value.aiArticleAuditEnabled !== originalSettings.value.aiArticleAuditEnabled ||
     editingSettings.value.aiCommentAuditEnabled !== originalSettings.value.aiCommentAuditEnabled ||
     editingSettings.value.aiArticleAutoAuditEnabled !== originalSettings.value.aiArticleAutoAuditEnabled ||
-    editingSettings.value.aiCommentAutoAuditEnabled !== originalSettings.value.aiCommentAutoAuditEnabled
+    editingSettings.value.aiCommentAutoAuditEnabled !== originalSettings.value.aiCommentAutoAuditEnabled ||
+    editingSettings.value.aiWritingEnabled !== originalSettings.value.aiWritingEnabled
   )
 })
 
@@ -348,19 +351,8 @@ const cancelChanges = () => {
   }
 }
 
-const handleWsStatusChange = (event: CustomEvent) => {
-  if (heartbeatSettingsRef.value?.handleWsStatusChange) {
-    heartbeatSettingsRef.value.handleWsStatusChange(event)
-  }
-}
-
 onMounted(() => {
   loadSettings()
-  window.addEventListener('ws-status-changed', handleWsStatusChange as EventListener)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('ws-status-changed', handleWsStatusChange as EventListener)
 })
 </script>
 

@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.config.WebsiteSettings;
 import com.example.backend.dto.LoginRequest;
 import com.example.backend.dto.RegisterRequest;
+import com.example.backend.dto.ResetPasswordRequest;
 import com.example.backend.entity.User;
 import com.example.backend.service.EmailService;
 import com.example.backend.service.HumanVerificationService;
@@ -348,18 +349,13 @@ public class AuthController {
 
     // 重置密码接口
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
             WebsiteSettings settings = settingsService.getSettings();
             
-            String username = request.get("username");
-            String email = request.get("email");
-            String emailCaptcha = request.get("emailCaptcha");
-            String newPassword = request.get("newPassword");
-
             // 验证邮箱验证码（仅当邮箱功能启用时）
             if (settings.isEmailEnabled()) {
-                if (!emailService.verifyCode(email, emailCaptcha)) {
+                if (!emailService.verifyCode(request.getEmail(), request.getEmailCaptcha())) {
                     Map<String, Object> response = new java.util.HashMap<>();
                     response.put("success", false);
                     response.put("message", "邮箱验证码错误");
@@ -369,7 +365,7 @@ public class AuthController {
             }
 
             // 重置密码
-            userService.resetPassword(username, email, newPassword);
+            userService.resetPassword(request.getUsername(), request.getEmail(), request.getNewPassword());
 
             // 重置成功，返回成功信息
             Map<String, Object> response = new java.util.HashMap<>();

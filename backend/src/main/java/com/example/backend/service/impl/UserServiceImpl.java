@@ -71,14 +71,20 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User login(String username, String password) {
+        // 先尝试用用户名查找
         User user = userMapper.findByUsername(username);
+        
+        // 如果用户名没找到，尝试用邮箱查找
+        if (user == null) {
+            user = userMapper.findByEmail(username);
+        }
 
         if (user == null) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new RuntimeException("用户名/邮箱或密码错误");
         }
 
         if (!PasswordUtils.matches(password, user.getPassword())) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new RuntimeException("用户名/邮箱或密码错误");
         }
 
         if ("BANNED".equals(user.getStatus())) {

@@ -49,6 +49,15 @@
       </div>
       
       <div 
+        v-if="canManageCategories"
+        class="sidebar-nav-item" 
+        :class="{ active: currentPage === 'categories' }"
+        @click="$emit('change-page', 'categories')"
+      >
+        <span class="nav-text">分类管理</span>
+      </div>
+      
+      <div 
         v-if="canManageReviews"
         class="sidebar-nav-item" 
         :class="{ active: currentPage === 'audit' }"
@@ -73,6 +82,15 @@
         @click="$emit('change-page', 'backup')"
       >
         <span class="nav-text">备份中心</span>
+      </div>
+      
+      <div 
+        v-if="canManageFeedback"
+        class="sidebar-nav-item" 
+        :class="{ active: currentPage === 'feedback' }"
+        @click="$emit('change-page', 'feedback')"
+      >
+        <span class="nav-text">反馈受理</span>
       </div>
       
       <div 
@@ -116,6 +134,8 @@ const canManageFiles = computed(() => hasPermission('file:manage'));
 const canManageReviews = computed(() => hasPermission('review:manage'));
 const canManageSettings = computed(() => hasPermission('site:manage'));
 const canManageBackups = computed(() => hasPermission('backup.manage'));
+const canManageCategories = computed(() => hasPermission('article.class'));
+const canManageFeedback = computed(() => hasPermission('feedback.manage'));
 
 const avatarInitial = computed(() => {
   if (!user.value) return '?'

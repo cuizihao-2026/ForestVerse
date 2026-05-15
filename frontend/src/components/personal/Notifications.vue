@@ -18,7 +18,6 @@
     </div>
 
     <div v-else-if="notifications.length === 0" class="empty-state">
-      <div class="empty-icon">🔔</div>
       <h3>暂无通知</h3>
       <p>目前没有任何通知</p>
     </div>

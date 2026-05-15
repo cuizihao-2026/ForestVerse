@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { API_BASE_URL } from '../../utils/api'
 
 const props = defineProps<{
@@ -12,10 +13,17 @@ const emit = defineEmits<{
   toggle: []
 }>()
 
+const router = useRouter()
 const isFrameMode = ref(false)
 
 const toggleMode = () => {
   isFrameMode.value = !isFrameMode.value
+}
+
+const goToCategory = () => {
+  if (props.category) {
+    router.push('/home?keyword=' + encodeURIComponent(props.category))
+  }
 }
 
 const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
@@ -25,7 +33,7 @@ const imageUrl = (path: string) => path ? API_BASE_URL + path : ''
   <div class="hero" :class="{ 'frame-mode': isFrameMode }" @click="toggleMode">
     <img :src="imageUrl(props.cover)" :alt="props.title" class="hero-img" />
     <div class="hero-overlay">
-      <el-tag v-if="props.category" effect="dark" size="small" round class="hero-cat">
+      <el-tag v-if="props.category" effect="dark" size="small" round class="hero-cat" style="cursor: pointer;" @click.stop="goToCategory">
         {{ props.category }}
       </el-tag>
       <div class="mode-hint">

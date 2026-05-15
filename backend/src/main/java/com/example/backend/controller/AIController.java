@@ -277,4 +277,104 @@ public class AIController {
 
         return emitter;
     }
+
+    @PostMapping("/writing-assist")
+    public ResponseEntity<ApiResponse<Map<String, String>>> writingAssist(@RequestBody Map<String, Object> requestBody, HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId == null) {
+                return ResponseEntity.status(401).body(ApiResponse.unauthorized("请先登录"));
+            }
+            
+            User currentUser = userService.findById(userId);
+            if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "ai.writing")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("权限不足"));
+            }
+
+            String taskType = (String) requestBody.get("taskType");
+            String title = (String) requestBody.get("title");
+            String content = (String) requestBody.get("content");
+            String userPrompt = (String) requestBody.get("userPrompt");
+
+            if (taskType == null || taskType.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("任务类型不能为空"));
+            }
+
+            String aiResponse = aiService.writingAssist(taskType, title, content, userPrompt);
+
+            Map<String, String> data = new HashMap<>();
+            data.put("result", aiResponse);
+            return ResponseEntity.ok(ApiResponse.success(data));
+        } catch (Exception e) {
+            logger.error("操作失败: " + e.getMessage(), e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("请求失败: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/writing-assist/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamWritingAssist(@RequestBody Map<String, Object> requestBody, HttpServletRequest request) {
+        SseEmitter emitter = new SseEmitter(5 * 60 * 1000L);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                Long userId = (Long) request.getAttribute("userId");
+                if (userId == null) {
+                    emitter.send(SseEmitter.event().data("请先登录"));
+                    emitter.complete();
+                    return;
+                }
+                
+                User currentUser = userService.findById(userId);
+                if (currentUser == null || !rolePermissionService.hasPermission(currentUser.getRole(), "ai.writing")) {
+                    emitter.send(SseEmitter.event().data("权限不足"));
+                    emitter.complete();
+                    return;
+                }
+
+                String taskType = (String) requestBody.get("taskType");
+                String title = (String) requestBody.get("title");
+                String content = (String) requestBody.get("content");
+                String userPrompt = (String) requestBody.get("userPrompt");
+
+                if (taskType == null || taskType.trim().isEmpty()) {
+                    emitter.send(SseEmitter.event().data("任务类型不能为空"));
+                    emitter.complete();
+                    return;
+                }
+
+                aiService.streamWritingAssist(taskType, title, content, userPrompt, new AIService.StreamResponseHandler() {
+                    @Override
+                    public void onChunk(String chunk) {
+                        try {
+                            emitter.send(SseEmitter.event().data(chunk));
+                        } catch (Exception e) {
+                            emitter.completeWithError(e);
+                        }
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        emitter.complete();
+                    }
+
+                    @Override
+                    public void onError(Throwable error) {
+                        try {
+                            emitter.send(SseEmitter.event().data("请求失败: " + error.getMessage()));
+                        } catch (Exception ignored) {}
+                        emitter.complete();
+                    }
+                });
+
+            } catch (Exception e) {
+                logger.error("操作失败: " + e.getMessage(), e);
+                try {
+                    emitter.send(SseEmitter.event().data("请求失败: " + e.getMessage()));
+                } catch (Exception ignored) {}
+                emitter.complete();
+            }
+        }, VIRTUAL_THREAD_EXECUTOR);
+
+        return emitter;
+    }
 }

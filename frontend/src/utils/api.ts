@@ -1,6 +1,4 @@
-import { getToken, logout } from '../stores/auth'
-import { getIsAccountKicked, getIsLoggingOut, setLoggingOut } from '../stores/websocket'
-import { showModal } from '../stores/modal'
+import { getToken } from '../stores/auth'
 
 // 后端基础地址配置
 // 开发环境用 Vite 代理，生产环境用相对路径（Nginx代理）
@@ -20,7 +18,7 @@ const buildUrl = (path: string): string => {
   return `${API_BASE_URL}${path}`
 }
 
-export const apiRequest = async (url: string, options: RequestOptions = {}) => {
+export const apiRequest = async <T = any>(url: string, options: RequestOptions = {}): Promise<T> => {
   const { skipAuth = false, ...fetchOptions } = options;
 
   const headers: Record<string, string> = {};
@@ -65,19 +63,6 @@ export const apiRequest = async (url: string, options: RequestOptions = {}) => {
       errorData = JSON.parse(text);
     } catch {}
     
-    // 如果是401且消息是"账号已在别处登录"，且 WS 还没有通知过，才弹窗
-    if (response.status === 401 && errorData.message?.includes('账号已在别处登录') && !getIsAccountKicked() && !getIsLoggingOut()) {
-      setLoggingOut(true)
-      showModal({
-        title: '提示',
-        message: errorData.message,
-        type: 'warning',
-        closable: false,
-        onConfirm: logout
-      });
-      return Promise.reject(new Error(errorData.message));
-    }
-    
     // 提取合适的错误消息
     let errorMessage;
     if (typeof errorData === 'string') {
@@ -95,13 +80,13 @@ export const apiRequest = async (url: string, options: RequestOptions = {}) => {
 
   // 尝试解析为 JSON，如果失败则返回文本
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as T;
   } catch {
-    return text;
+    return text as unknown as T;
   }
 };
 
-export const get = (url: string, params?: any, options?: RequestOptions) => {
+export const get = <T = any>(url: string, params?: any, options?: RequestOptions): Promise<T> => {
   let fullUrl = url;
   if (params) {
     const searchParams = new URLSearchParams();
@@ -115,39 +100,39 @@ export const get = (url: string, params?: any, options?: RequestOptions) => {
       fullUrl += (url.includes('?') ? '&' : '?') + queryString;
     }
   }
-  return apiRequest(fullUrl, { ...options, method: 'GET' });
+  return apiRequest<T>(fullUrl, { ...options, method: 'GET' });
 };
 
-export const post = (url: string, data?: any, options?: RequestOptions) => {
+export const post = <T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> => {
   let body;
   if (data instanceof FormData) {
     body = data;
   } else if (data !== undefined) {
     body = JSON.stringify(data);
   }
-  return apiRequest(url, {
+  return apiRequest<T>(url, {
     ...options,
     method: 'POST',
     body
   });
 };
 
-export const put = (url: string, data?: any, options?: RequestOptions) => {
+export const put = <T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> => {
   let body;
   if (data instanceof FormData) {
     body = data;
   } else if (data !== undefined) {
     body = JSON.stringify(data);
   }
-  return apiRequest(url, {
+  return apiRequest<T>(url, {
     ...options,
     method: 'PUT',
     body
   });
 };
 
-export const del = (url: string, options?: RequestOptions) => {
-  return apiRequest(url, { ...options, method: 'DELETE' });
+export const del = <T = any>(url: string, options?: RequestOptions): Promise<T> => {
+  return apiRequest<T>(url, { ...options, method: 'DELETE' });
 };
 
 // 文件上传工具函数

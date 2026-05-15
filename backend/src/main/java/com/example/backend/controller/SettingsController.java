@@ -239,6 +239,7 @@ public class SettingsController {
             result.put("aiCommentAuditEnabled", settings.isAiCommentAuditEnabled());
             result.put("aiArticleAutoAuditEnabled", settings.isAiArticleAutoAuditEnabled());
             result.put("aiCommentAutoAuditEnabled", settings.isAiCommentAutoAuditEnabled());
+            result.put("aiWritingEnabled", settings.isAiWritingEnabled());
             // 不返回API密钥等敏感信息
             return ResponseEntity.ok(result);
         } catch (Exception e) {

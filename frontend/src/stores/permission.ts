@@ -12,7 +12,6 @@ export const loadUserPermissions = async () => {
     return permissions
   } catch (error) {
     console.error('获取用户权限失败:', error)
-    userPermissions.value = new Set()
   }
 }
 

@@ -8,6 +8,10 @@ public interface AIService {
     void streamChat(String userMessage, String articleContent, List<Map<String, String>> history, StreamResponseHandler handler);
     Map<String, Object> queryBalance();
     
+    // 写作助手相关方法
+    String writingAssist(String taskType, String title, String content, String userPrompt);
+    void streamWritingAssist(String taskType, String title, String content, String userPrompt, StreamResponseHandler handler);
+    
     interface StreamResponseHandler {
         void onChunk(String chunk);
         void onComplete();

@@ -28,6 +28,8 @@ const isLoggedIn = computed(() => isLoggedInStore.value)
 const currentUser = computed(() => currentUserStore.value)
 const isHomePage = computed(() => route.path === '/home')
 const isFriendsPage = computed(() => route.path === '/friends')
+const isFeedbackPage = computed(() => route.path === '/feedback')
+const isPersonalPage = computed(() => route.path === '/personal')
 
 const avatarInitial = computed(() => {
   if (!currentUser.value) return '?'
@@ -41,6 +43,10 @@ const goToHome = () => {
 
 const goToFriends = () => {
   router.push('/friends')
+}
+
+const goToFeedback = () => {
+  router.push('/feedback')
 }
 
 const goToLogin = () => {
@@ -99,6 +105,12 @@ const handleClickOutside = (e: MouseEvent) => {
           <li class="nav-item">
             <button class="nav-link" :class="{ active: isFriendsPage }" @click="goToFriends">好友</button>
           </li>
+          <li class="nav-item">
+            <button class="nav-link" :class="{ active: isFeedbackPage }" @click="goToFeedback">反馈</button>
+          </li>
+          <li v-if="isLoggedIn" class="nav-item">
+            <button class="nav-link" :class="{ active: isPersonalPage }" @click="goToProfile">个人中心</button>
+          </li>
         </ul>
       </div>
 
@@ -135,12 +147,13 @@ const handleClickOutside = (e: MouseEvent) => {
                 <button class="dropdown-item" @click="goToProfile">
                   <span class="item-text">个人中心</span>
                 </button>
+                <div class="dropdown-divider"></div>
                 <template v-if="hasPermission('admin.use')">
                   <button class="dropdown-item admin-btn" @click="goToAdmin">
                     <span class="item-text">管理面板</span>
                   </button>
+                  <div class="dropdown-divider"></div>
                 </template>
-                <div class="dropdown-divider"></div>
                 <button class="dropdown-item logout-btn" @click="logout">
                   <span class="item-text">退出登录</span>
                 </button>

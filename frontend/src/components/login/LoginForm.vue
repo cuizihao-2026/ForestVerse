@@ -38,7 +38,7 @@ const fetchSecurityConfig = async () => {
 
 const handleLogin = async () => {
   if (!form.username || !form.password) {
-    errorMessage.value = '请输入用户名和密码'
+    errorMessage.value = '请输入用户名/邮箱和密码'
     return
   }
 
@@ -107,12 +107,12 @@ onMounted(() => {
         <!-- 登录表单 -->
         <form @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
-            <label for="username">用户名</label>
+            <label for="username">用户名/邮箱</label>
             <input 
               type="text" 
               id="username" 
               v-model="form.username" 
-              placeholder="请输入用户名" 
+              placeholder="请输入用户名或邮箱" 
               class="form-input"
               autocomplete="username"
             />
@@ -246,7 +246,7 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 700;
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .login-content {
@@ -282,7 +282,7 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #332211;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .form-input {
@@ -391,7 +391,7 @@ input[type="password"] {
   transition: all 0.3s ease;
   margin-top: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .login-button:hover:not(:disabled) {
@@ -412,7 +412,7 @@ input[type="password"] {
   text-align: center;
   font-size: 14px;
   color: #332211;
-  font-family: 'Georgia', serif;
+  font-family: var(--sans);
 }
 
 .footer-link {

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.FeedbackMessageMapper">
+    <resultMap id="messageMap" type="com.example.backend.entity.FeedbackMessage">
+        <id property="id" column="id" />
+        <result property="feedbackId" column="feedback_id" />
+        <result property="senderId" column="sender_id" />
+        <result property="isAdmin" column="is_admin" />
+        <result property="content" column="content" />
+        <result property="isRead" column="is_read" />
+        <result property="createdAt" column="created_at" />
+        <result property="senderNickname" column="sender_nickname" />
+        <result property="senderAvatar" column="sender_avatar" />
+    </resultMap>
+
+    <select id="findByFeedbackId" parameterType="Long" resultMap="messageMap">
+        SELECT fm.*, u.nickname as sender_nickname, u.avatar as sender_avatar
+        FROM feedback_message fm
+        LEFT JOIN user u ON fm.sender_id = u.id
+        WHERE fm.feedback_id = #{feedbackId}
+        ORDER BY fm.created_at ASC
+    </select>
+
+    <insert id="insert" parameterType="com.example.backend.entity.FeedbackMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO feedback_message (feedback_id, sender_id, is_admin, content, is_read, created_at)
+        VALUES (#{feedbackId}, #{senderId}, #{isAdmin}, #{content}, #{isRead}, #{createdAt})
+    </insert>
+
+    <update id="markAsRead">
+        UPDATE feedback_message
+        SET is_read = 1
+        WHERE feedback_id = #{feedbackId}
+          AND sender_id != #{userId}
+          AND is_read = 0
+    </update>
+
+    <select id="countUnread" resultType="Integer">
+        SELECT COUNT(*)
+        FROM feedback_message
+        WHERE feedback_id = #{feedbackId}
+          AND sender_id != #{userId}
+          AND is_read = 0
+    </select>
+</mapper>

@@ -603,7 +603,7 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
                   :class="msg.role"
                 >
                   <div v-if="msg.role === 'ai'" class="ai-message-avatar">
-                    <el-icon><MagicStick /></el-icon>
+                    <img src="/src/assets/images/AI.jpg" alt="森小语" class="ai-avatar-img" />
                   </div>
                   <div class="ai-message-content">
                     <div v-if="msg.role === 'ai' && aiLoading && idx === aiMessages.length - 1" class="ai-message-text">
@@ -920,8 +920,14 @@ const sendNonStreamRequest = async (requestBody: any, aiMessageIndex: number) =>
 }
 
 .ai-message.ai .ai-message-avatar {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: #fff;
+  background: transparent;
+  overflow: hidden;
+}
+
+.ai-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .ai-message.user .ai-message-avatar {

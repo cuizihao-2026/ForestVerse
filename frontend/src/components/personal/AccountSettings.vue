@@ -59,7 +59,6 @@
         class="message" 
         :class="messageType"
       >
-        <span class="message-icon">{{ messageType === 'success' ? '✅' : '❌' }}</span>
         <span class="message-text">{{ messageText }}</span>
         <button class="message-close" @click="showMessage = false">×</button>
       </div>

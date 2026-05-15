@@ -41,7 +41,7 @@ export const removeToken = () => {
   localStorage.removeItem('authToken')
 }
 
-export const checkLoginStatus = () => {
+export const checkLoginStatus = async () => {
   const userStr = localStorage.getItem('currentUser')
   const token = getToken()
 
@@ -64,8 +64,8 @@ export const checkLoginStatus = () => {
 
       window.dispatchEvent(new CustomEvent('auth-login'))
       loadNotifications()
-      loadUserPermissions()
-      loadUserRoleDescription()
+      await loadUserPermissions()
+      await loadUserRoleDescription()
       return true
     } catch (error) {
       console.error('解析用户信息失败:', error)

@@ -14,7 +14,6 @@
           :class="['tab-btn', { active: activeTab === tab.id }]"
           @click="switchTab(tab.id)"
         >
-          <span class="tab-icon">{{ tab.icon }}</span>
           <span class="tab-label">{{ tab.label }}</span>
           <span v-if="tab.count > 0" class="tab-count">{{ tab.count }}</span>
         </button>
@@ -23,7 +22,6 @@
       <!-- 文件展示区域 -->
       <div class="files-section">
         <div v-if="files.length === 0" class="empty-state">
-          <div class="empty-icon">📁</div>
           <h3>暂无文件</h3>
           <p>当前文件夹中还没有文件</p>
         </div>
@@ -37,7 +35,7 @@
               </div>
               <div class="preview-overlay">
                 <button class="overlay-btn" @click.stop="deleteFile(file)" title="删除">
-                  🗑️
+                  删除
                 </button>
               </div>
             </div>
@@ -89,7 +87,7 @@ interface FileInfo {
 interface FolderTab {
   id: string
   label: string
-  icon: string
+  icon?: string
   count: number
 }
 
@@ -114,16 +112,6 @@ const getDisplayDirectoryName = (dir: string): string => {
   return '其他'
 }
 
-const getFolderIcon = (dir: string): string => {
-  if (!dir) return '📂'
-  const lower = dir.toLowerCase()
-  if (lower === 'avatars' || lower === 'avatar' || lower === 'user-avatars') return '👤'
-  if (lower === 'covers' || lower === 'cover' || lower === 'article-covers') return '🖼️'
-  if (lower === 'chat-images' || lower === 'chatimages') return '💬'
-  if (lower === 'site-ui') return '🎨'
-  return '📁'
-}
-
 const folderTabs = computed<FolderTab[]>(() => {
   const tabs: FolderTab[] = []
 
@@ -131,7 +119,6 @@ const folderTabs = computed<FolderTab[]>(() => {
     tabs.push({
       id: dir,
       label: getDisplayDirectoryName(dir),
-      icon: getFolderIcon(dir),
       count: folderStats.value.get(dir) || 0
     })
   })
@@ -148,15 +135,15 @@ const isImage = (fileName: string): boolean => {
 
 const getFileIcon = (fileName: string): string => {
   const ext = fileName.toLowerCase()
-  if (ext.endsWith('.pdf')) return '📄'
-  if (ext.endsWith('.doc') || ext.endsWith('.docx')) return '📝'
-  if (ext.endsWith('.xls') || ext.endsWith('.xlsx')) return '📊'
-  if (ext.endsWith('.ppt') || ext.endsWith('.pptx')) return '📈'
-  if (ext.endsWith('.txt')) return '📃'
-  if (ext.endsWith('.zip') || ext.endsWith('.rar')) return '📦'
-  if (ext.endsWith('.mp4') || ext.endsWith('.webm')) return '🎥'
-  if (ext.endsWith('.mp3')) return '🎵'
-  return '📄'
+  if (ext.endsWith('.pdf')) return 'PDF'
+  if (ext.endsWith('.doc') || ext.endsWith('.docx')) return 'DOC'
+  if (ext.endsWith('.xls') || ext.endsWith('.xlsx')) return 'XLS'
+  if (ext.endsWith('.ppt') || ext.endsWith('.pptx')) return 'PPT'
+  if (ext.endsWith('.txt')) return 'TXT'
+  if (ext.endsWith('.zip') || ext.endsWith('.rar')) return 'ZIP'
+  if (ext.endsWith('.mp4') || ext.endsWith('.webm')) return 'MP4'
+  if (ext.endsWith('.mp3')) return 'MP3'
+  return '文件'
 }
 
 const loadFolderStats = async () => {

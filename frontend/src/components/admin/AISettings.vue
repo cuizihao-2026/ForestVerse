@@ -245,6 +245,25 @@
             </div>
         </div>
 
+        <div class="setting-item">
+          <div class="setting-label">
+            <span class="label-text">启用 AI 写作助手</span>
+            <span class="label-desc">开启后，用户可以在文章编辑页面使用 AI 写作助手</span>
+          </div>
+          <div class="toggle-wrapper">
+            <label class="toggle-switch">
+              <input 
+                type="checkbox" 
+                :checked="localSettings.aiWritingEnabled" 
+                @change="(e) => updateSetting('aiWritingEnabled', (e.target as HTMLInputElement).checked)"
+              />
+              <span class="slider">
+                <span class="slider-dot"></span>
+              </span>
+            </label>
+          </div>
+        </div>
+
         <div class="balance-section">
             <div class="balance-header">
                 <div class="section-icon" style="width: 40px; height: 40px;">
@@ -288,6 +307,7 @@ interface Props {
         aiCommentAuditEnabled?: boolean;
         aiArticleAutoAuditEnabled?: boolean;
         aiCommentAutoAuditEnabled?: boolean;
+        aiWritingEnabled?: boolean;
         [key: string]: any;
     };
 }

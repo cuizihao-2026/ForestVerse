@@ -122,7 +122,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { checkWsStatus } from '../../stores/websocket';
+import { checkWsStatus, getWsStatus } from '../../stores/websocket';
 
 interface Props {
   settings: {
@@ -196,30 +196,37 @@ const handleTimeoutChange = (event: any) => {
 };
 
 const handleWsStatusChange = (event: CustomEvent) => {
-  wsStatus.value = event.detail.status;
+  wsStatus.value = event.detail.status
   if (event.detail.lastHeartbeat) {
-    lastHeartbeat.value = event.detail.lastHeartbeat;
+    lastHeartbeat.value = event.detail.lastHeartbeat
   }
-};
+}
 
 defineExpose({
   updateLocalSettings,
   handleWsStatusChange
-});
+})
 
 // 组件挂载时启动状态检查
 onMounted(() => {
-  checkWsStatus(); // 立即检查一次
+  // 获取初始状态
+  const initialStatus = getWsStatus()
+  wsStatus.value = initialStatus.status
+  if (initialStatus.lastHeartbeat) {
+    lastHeartbeat.value = initialStatus.lastHeartbeat
+  }
+  window.addEventListener('ws-status-changed', handleWsStatusChange as EventListener)
   statusCheckTimer = window.setInterval(() => {
-    checkWsStatus();
-  }, 1000);
-});
+    checkWsStatus()
+  }, 1000)
+})
 
 // 组件卸载时停止状态检查
 onUnmounted(() => {
+  window.removeEventListener('ws-status-changed', handleWsStatusChange as EventListener)
   if (statusCheckTimer !== null) {
-    clearInterval(statusCheckTimer);
-    statusCheckTimer = null;
+    clearInterval(statusCheckTimer)
+    statusCheckTimer = null
   }
 });
 </script>
